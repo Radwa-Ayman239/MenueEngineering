@@ -1,0 +1,74 @@
+services:
+  backend:
+    build: ./backend
+    container_name: menu_engineering_backend
+    command: sh -c "python3 manage.py makemigrations &&
+                    python3 manage.py migrate && 
+                    python3 manage.py collectstatic --noinput && 
+                    gunicorn menu_engineering.wsgi:application --bind 0.0.0.0:8000 --access-logfile -"
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env.local
+  
+  nginx:
+    build: ./backend/nginx
+    container_name: menu_engineering_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    depends_on:
+      - backend
+    restart: on-failure
+  
+  redis:
+    image: redis:alpine
+    container_name: menu_engineering_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  celery_worker:
+    build: ./backend
+    container_name: menu_engineering_celery_worker
+    command: celery -A menu_engineering worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - ./backend/.env.local
+    environment:
+      - POSTGRES=menu_engineering
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+  
+  db:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=menu_engineering
+    volumes:
+      - postgres_data_v2:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data_v2:
+  static_volume:
+  media_volume:
+  redis_data:

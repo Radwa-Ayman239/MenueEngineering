@@ -1,0 +1,25 @@
+# Django core
+Django==5.2.10
+djangorestframework==3.16.1
+
+# Auth
+dj-rest-auth==7.0.2
+django-allauth==65.13.1
+django-rest-knox==5.0.2
+
+# Middleware & utilities
+django-cors-headers==4.9.0
+django-redis==6.0.0
+django-phonenumber-field==8.4.0
+phonenumbers==9.0.21
+
+# Database
+psycopg2-binary==2.9.11
+
+# HTTP & parsing
+requests==2.32.5
+tldextract==5.3.1
+
+# Media
+pillow==12.1.0
+whitenoise==6.9.0
