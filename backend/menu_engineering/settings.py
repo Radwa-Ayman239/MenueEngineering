@@ -39,6 +39,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    # Third-party
+    "rest_framework",
+    "knox",
+    "drf_spectacular",
+    "phonenumber_field",
+    # Local apps
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -136,3 +143,71 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SITE_ID = 1
+
+# Login
+ACCOUNT_LOGIN_METHODS = ["email"]
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+
+# Email backend (for testing)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+CELERY_BROKER_URL = "redis://redis:6379/2"
+CELERY_RESULT_BACKEND = "redis://redis:6379/2"
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# SMS (Twilio) Configuration
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
+
+# Custom User Model
+AUTH_USER_MODEL = "users.CustomUser"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "knox.auth.TokenAuthentication",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "2FA Authentication API",
+    "DESCRIPTION": """
+    # 2FA Authentication System API
+    
+    ## Features:
+    - User creation (Admin/Manager only)
+    - Email activation + password setup
+    - 2FA SMS login flow
+    - Token refresh & logout
+    - Password reset
+    
+    ## Login Flow:
+    1. POST `/api/users/login/` (email + password)
+    2. Receive OTP via SMS
+    3. POST `/api/users/login/verify/` (OTP)
+    4. Receive access/refresh tokens
+    """,
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "AUTHENTICATION_WHITELIST": [
+        "knox.auth.TokenAuthentication",
+    ],
+    "SECURITY": [{"TokenAuthentication": []}],
+    "ENUM_NAME_OVERRIDES": {
+        "CustomUser.UserTypes": "UserTypeEnum",
+    },
+}

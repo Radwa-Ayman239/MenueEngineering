@@ -11,3 +11,6 @@ coverage==7.13.1
 
 # Developer UX
 rich==14.2.0
+
+# OPenAPI3 Documentation
+drf-spectacular==0.29.0

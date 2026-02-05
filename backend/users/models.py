@@ -15,14 +15,20 @@ class CustomUser(AbstractUser):
     email = models.EmailField(_("Email Address"), unique=True)
     first_name = models.CharField(_("first name"), max_length=150, blank=False)
     last_name = models.CharField(_("last name"), max_length=150, blank=False)
-    phone_number = PhoneNumberField(_("Phone Number"), blank=True, null=True)
+    phone_number = PhoneNumberField(_("Phone Number"), blank=False, null=False)
 
     class UserTypes(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MANAGER = "manager", _("Manager")
+        STAFF = "staff", _("Staff")
 
     type = models.CharField(
-        max_length=50, choices=UserTypes.choices, default=UserTypes.MANAGER
+        max_length=50, choices=UserTypes.choices, default=UserTypes.STAFF
+    )
+    is_email_verified = models.BooleanField(
+        _("Email Verified"),
+        default=False,
+        help_text=_("Designates whether this user has verified their email address."),
     )
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name", "phone_number"]
