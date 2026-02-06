@@ -1,0 +1,17 @@
+{
+  "features": [
+    "price",
+    "purchases",
+    "margin"
+  ],
+  "classes": [
+    "Dog",
+    "Plowhorse",
+    "Puzzle",
+    "Star"
+  ],
+  "model_type": "DecisionTreeClassifier",
+  "max_depth": 4,
+  "training_samples": 24325,
+  "test_accuracy": 1.0
+}

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "phonenumber_field",
     # Local apps
     "users",
+    "menu",
 ]
 
 MIDDLEWARE = [
@@ -184,9 +185,9 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "2FA Authentication API",
+    "TITLE": "Menu Engineering API",
     "DESCRIPTION": """
-    # 2FA Authentication System API
+    # Menu Engineering Platform API
     
     ## Features:
     - User creation (Admin/Manager only)
@@ -194,6 +195,9 @@ SPECTACULAR_SETTINGS = {
     - 2FA SMS login flow
     - Token refresh & logout
     - Password reset
+    - Menu Management (CRUD)
+    - Order Management
+    - AI-powered menu classification
     
     ## Login Flow:
     1. POST `/api/users/login/` (email + password)
@@ -209,5 +213,10 @@ SPECTACULAR_SETTINGS = {
     "SECURITY": [{"TokenAuthentication": []}],
     "ENUM_NAME_OVERRIDES": {
         "CustomUser.UserTypes": "UserTypeEnum",
+        "MenuItem.CategoryChoices": "MenuCategoryEnum",
+        "Order.StatusChoices": "OrderStatusEnum",
     },
 }
+
+# ML Service Configuration
+ML_SERVICE_URL = os.environ.get("ML_SERVICE_URL", "http://ml_service:8001")

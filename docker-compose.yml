@@ -56,6 +56,22 @@ services:
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
   
+  ml_service:
+    build: ./ml_service
+    container_name: menu_engineering_ml
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ml_service:/app
+      - ./ml_service/models:/app/models
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: on-failure
+
   db:
     image: postgres:15-alpine
     container_name: postgres
