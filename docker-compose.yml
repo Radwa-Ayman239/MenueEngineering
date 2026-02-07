@@ -10,6 +10,7 @@ services:
       - ./backend:/app
       - static_volume:/app/static
       - media_volume:/app/media
+      - ./Data Analysis:/code/Data Analysis
     ports:
       - "8000:8000"
     depends_on:

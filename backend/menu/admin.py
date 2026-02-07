@@ -10,27 +10,63 @@ class MenuSectionAdmin(admin.ModelAdmin):
     ordering = ("display_order", "name")
 
 
+# @admin.register(MenuItem)
+# class MenuItemAdmin(admin.ModelAdmin):
+#     list_display = (
+#         #"external_id",
+#         "title",
+#         "section",
+#         "price",
+#         "cost",
+#         "margin_display",
+#         #"category",
+#         "total_revenue", # Added
+#         "total_profit",  # Added
+#         "ai_confidence_display",
+#         "is_active",
+#     )
+#     list_filter = ("section", "category", "is_active")
+#     search_fields = ("title", "description")
+#     ordering = ("section", "display_order", "title")
+#     readonly_fields = (
+#         "external_id",
+#         "category",
+#         "ai_confidence",
+#         "last_analyzed",
+#         "total_purchases",
+#         "total_revenue",
+#         "total_profit", # Added
+#     )
+
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
+    # These are the fields populated by your CSV
     list_display = (
         "title",
-        "section",
+        "category",
         "price",
-        "cost",
-        "margin_display",
-        "category",
-        "ai_confidence_display",
-        "is_active",
-    )
-    list_filter = ("section", "category", "is_active")
-    search_fields = ("title", "description")
-    ordering = ("section", "display_order", "title")
-    readonly_fields = (
-        "category",
-        "ai_confidence",
-        "last_analyzed",
         "total_purchases",
         "total_revenue",
+        "total_profit",
+    )
+    
+    # CRITICAL: Pagination and performance for 87k items
+    list_per_page = 50
+    show_full_result_count = False 
+    
+    # Filter by the categories found in your CSV (Star, Dog, etc.)
+    list_filter = ("category", "is_active")
+    search_fields = ("title", "external_id")
+    
+    # Standardize ordering to prevent database strain
+    ordering = ("title",)
+
+    # Make imported stats viewable but not editable
+    readonly_fields = (
+        "category",
+        "total_purchases",
+        "total_revenue",
+        "total_profit",
     )
 
     fieldsets = (

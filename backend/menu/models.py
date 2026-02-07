@@ -49,10 +49,10 @@ class MenuItem(models.Model):
 
     title = models.CharField(_("Title"), max_length=255)
     description = models.TextField(_("Description"), blank=True)
-    price = models.DecimalField(_("Price"), max_digits=10, decimal_places=2)
+    price = models.DecimalField(_("Price"), max_digits=20, decimal_places=2)
     cost = models.DecimalField(
         _("Cost"),
-        max_digits=10,
+        max_digits=20,
         decimal_places=2,
         default=0.00,
         help_text=_("Actual cost to prepare this item"),
@@ -91,12 +91,12 @@ class MenuItem(models.Model):
     )
     
     # Computed fields (updated periodically or on order)
-    total_purchases = models.PositiveIntegerField(_("Total Purchases"), default=0)
+    total_purchases = models.FloatField(_("Total Purchases"), default=0)
     total_revenue = models.DecimalField(
-        _("Total Revenue"), max_digits=12, decimal_places=2, default=0
+        _("Total Revenue"), max_digits=20, decimal_places=2, default=0
     )
     total_profit = models.DecimalField(
-        _("Total Profit"), max_digits=12, decimal_places=2, default=0
+        _("Total Profit"), max_digits=20, decimal_places=2, default=0
     )
     class Meta:
         ordering = ["section", "display_order", "title"]
@@ -161,10 +161,10 @@ class Order(models.Model):
     )
     notes = models.TextField(_("Notes"), blank=True)
     subtotal = models.DecimalField(
-        _("Subtotal"), max_digits=10, decimal_places=2, default=0
+        _("Subtotal"), max_digits=20, decimal_places=2, default=0
     )
-    tax = models.DecimalField(_("Tax"), max_digits=10, decimal_places=2, default=0)
-    total = models.DecimalField(_("Total"), max_digits=10, decimal_places=2, default=0)
+    tax = models.DecimalField(_("Tax"), max_digits=20, decimal_places=2, default=0)
+    total = models.DecimalField(_("Total"), max_digits=20, decimal_places=2, default=0)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -201,7 +201,7 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(_("Quantity"), default=1)
     price_at_order = models.DecimalField(
         _("Price at Order"),
-        max_digits=10,
+        max_digits=20,
         decimal_places=2,
         help_text=_("Price captured at time of order"),
     )
