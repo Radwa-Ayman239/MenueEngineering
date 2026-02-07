@@ -139,13 +139,11 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         - Read operations (list, retrieve): Public
-        - Stats, analyze: Managers/Admins only
+        - Stats, analyze: Public for development (TODO: Add auth in production)
         - Write operations: Managers/Admins only
         """
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "stats", "analyze", "bulk_analyze"]:
             return [AllowAny()]
-        if self.action in ["stats", "analyze", "bulk_analyze"]:
-            return [IsAuthenticated(), IsAdminOrManager()]
         return [IsAuthenticated(), IsAdminOrManager()]
 
     def get_serializer_class(self):
@@ -604,7 +602,7 @@ class SalesSuggestionsView(APIView):
     """
     Get AI-powered sales suggestions for a menu item.
 
-    Permissions: Managers and Admins only
+    Permissions: Public for development (TODO: Add auth in production)
     Method: POST
 
     Request body:
@@ -620,7 +618,7 @@ class SalesSuggestionsView(APIView):
     Returns priority, suggested price, actions, marketing tips.
     """
 
-    permission_classes = [IsAuthenticated, IsAdminOrManager]
+    permission_classes = [AllowAny]  # Public for development
 
     def post(self, request):
         item_id = request.data.get("item_id")
