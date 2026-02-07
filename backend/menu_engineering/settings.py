@@ -236,4 +236,4 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ML Service Configuration
-ML_SERVICE_URL = os.environ.get("ML_SERVICE_URL", "http://ml_service:8001")
+ML_SERVICE_URL = os.environ.get("ML_SERVICE_URL", "http://localhost:8001")

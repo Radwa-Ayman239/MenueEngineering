@@ -19,17 +19,29 @@ from typing import Optional
 
 # Import OpenRouter AI service
 try:
-    from openrouter_service import (
-        enhance_description,
-        analyze_menu_structure,
-        generate_sales_suggestions,
-        get_customer_recommendations,
-        generate_owner_report,
-        is_gemini_available,
-    )
-
+    try:
+        from .openrouter_service import (
+            enhance_description,
+            analyze_menu_structure,
+            generate_sales_suggestions,
+            get_customer_recommendations,
+            generate_owner_report,
+            is_gemini_available,
+        )
+    except (ImportError, ValueError):
+        from openrouter_service import (
+            enhance_description,
+            analyze_menu_structure,
+            generate_sales_suggestions,
+            get_customer_recommendations,
+            generate_owner_report,
+            is_gemini_available,
+        )
     AI_ENABLED = True
-except ImportError:
+except Exception as e:
+    import traceback
+    print("CRITICAL: Failed to import AI services")
+    traceback.print_exc()
     AI_ENABLED = False
 
 
@@ -244,12 +256,17 @@ async def api_generate_report(request: OwnerReportRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    ai_status = AI_ENABLED and is_gemini_available() if AI_ENABLED else False
+    # Core service is healthy if AI_ENABLED is True (imports passed)
+    is_healthy = AI_ENABLED
+    
+    # Live AI check (requires API key)
+    live_ai_available = AI_ENABLED and is_gemini_available() if AI_ENABLED else False
+    
     return {
-        "status": "healthy",
-        "ai_enabled": ai_status,
-        # Legacy field names for backwards compatibility
-        "gemini_enabled": ai_status,
+        "status": "healthy" if is_healthy else "unhealthy",
+        "mock_mode": AI_ENABLED and not live_ai_available,
+        "ai_enabled": live_ai_available,
+        "details": "Running with mock data" if AI_ENABLED and not live_ai_available else "Full AI enabled" if live_ai_available else "Service degraded"
     }
 
 
