@@ -2,6 +2,15 @@
 Serializers for the Menu app.
 """
 
+"""
+File: serializers.py
+Author: Hamdy El-Madbouly
+Description: Serializers for the Menu application.
+These classes are responsible for converting complex data types (like QuerySets and model instances)
+into native Python datatypes that can then be easily rendered into JSON, XML or other content types.
+They also handle deserialization and data validation for incoming requests.
+"""
+
 from rest_framework import serializers
 from .models import MenuSection, MenuItem, Order, OrderItem, CustomerActivity
 

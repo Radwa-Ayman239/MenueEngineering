@@ -1,3 +1,11 @@
+/*
+ * File: globals.css
+ * Author: Hamdy El-Madbouly
+ * Description: Global CSS and Tailwind Theme Configuration.
+ * Sets up the design system using CSS variables for theming (light/dark mode).
+ * Includes custom Tailwind directives and Shadcn UI component styles.
+ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

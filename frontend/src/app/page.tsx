@@ -1,3 +1,13 @@
+/**
+ * File: page.tsx
+ * Authors: Hamdy El-Madbouly, Hajar
+ * Description: Landing page for the Menu Engineering application.
+ * Provides the main entry point with navigation cards for different user roles:
+ * - Customer: View public menu
+ * - Staff: POS and order management
+ * - Manager: Dashboard and analytics
+ */
+
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

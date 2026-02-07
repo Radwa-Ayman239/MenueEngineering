@@ -1,3 +1,12 @@
+"""
+File: managers.py
+Author: Hamdy El-Madbouly
+Description: Custom User and Token Management.
+Extends Django's BaseUserManager to handle email-based authentication.
+Includes a TokenManager utility for generating and validating signed tokens
+for email verification, password resets, and OTPs.
+"""
+
 import secrets
 from django.core.cache import cache
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired

@@ -1,3 +1,14 @@
+/**
+ * File: page.tsx
+ * Authors: Hamdy El-Madbouly, Hajar
+ * Description: Public-facing Digital Menu.
+ * Displays the menu to customers with a focus on user experience and visual appeal.
+ * Features include:
+ * - Category-based sectioning
+ * - visual badges for menu items (based on psychology)
+ * - Responsive grid layout for mobile and desktop
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";

@@ -1,5 +1,10 @@
 """
-URL Configuration for the Menu app.
+File: urls.py
+Author: Hamdy El-Madbouly
+Description: URL Configuration for the Menu app.
+Defines the routing for the menu API, including standard ViewSets (items, orders)
+and specialized AI endpoints (sales suggestions, reports).
+Uses a DefaultRouter for RESTful resources and explicit paths for functional endpoints.
 """
 
 from django.urls import path, include

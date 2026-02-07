@@ -1,5 +1,9 @@
 """
-Custom permission classes for role-based access control.
+File: permissions.py
+Author: Hamdy El-Madbouly
+Description: Custom Permissions for Role-Based Access Control (RBAC).
+Defines granular permission classes (IsAdmin, IsAdminOrManager, IsEmailVerified)
+to secure API endpoints based on user roles and account status.
 """
 
 from rest_framework.permissions import BasePermission

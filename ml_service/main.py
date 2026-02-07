@@ -1,15 +1,13 @@
 """
-Menu Engineering ML Service - AI Features Only.
-
-This service provides AI-powered features using OpenRouter/DeepSeek:
-- Description enhancement
-- Sales suggestions
-- Menu structure analysis
-- Customer recommendations
-- Owner reports
+File: main.py
+Authors: Hamdy El-Madbouly
+Description: Main entry point for the FastAPI Machine Learning service.
+This microservice handles all AI-powered operations (OpenRouter/DeepSeek integration)
+separate from the main Django backend. It provides endpoints for description enhancement,
+sales suggestions, menu analysis, and owner reports.
 
 Note: Menu item classification (Star/Plowhorse/Puzzle/Dog) is handled
-by the Django backend using a deterministic algorithm.
+locally by the Django backend's menu_classifier module.
 """
 
 from fastapi import FastAPI, HTTPException
@@ -40,6 +38,7 @@ try:
     AI_ENABLED = True
 except Exception as e:
     import traceback
+
     print("CRITICAL: Failed to import AI services")
     traceback.print_exc()
     AI_ENABLED = False
@@ -258,15 +257,19 @@ async def health_check():
     """Health check endpoint"""
     # Core service is healthy if AI_ENABLED is True (imports passed)
     is_healthy = AI_ENABLED
-    
+
     # Live AI check (requires API key)
     live_ai_available = AI_ENABLED and is_gemini_available() if AI_ENABLED else False
-    
+
     return {
         "status": "healthy" if is_healthy else "unhealthy",
         "mock_mode": AI_ENABLED and not live_ai_available,
         "ai_enabled": live_ai_available,
-        "details": "Running with mock data" if AI_ENABLED and not live_ai_available else "Full AI enabled" if live_ai_available else "Service degraded"
+        "details": (
+            "Running with mock data"
+            if AI_ENABLED and not live_ai_available
+            else "Full AI enabled" if live_ai_available else "Service degraded"
+        ),
     }
 
 

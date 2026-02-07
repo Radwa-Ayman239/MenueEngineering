@@ -7,6 +7,15 @@ Permissions:
 - Customers (unauthenticated): Can only view menu sections and items (read-only)
 """
 
+"""
+File: views.py
+Author: Hamdy El-Madbouly
+Description: Contains the Django REST Framework API views for the Menu application.
+This file handles HTTP requests for menu items, orders, and AI-powered features.
+It integrates with the ML service for generating sales suggestions, dashboard reports,
+and optimizing menu descriptions.
+"""
+
 from rest_framework import viewsets, status, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action

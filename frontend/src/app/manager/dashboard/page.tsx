@@ -1,3 +1,14 @@
+/**
+ * File: page.tsx
+ * Authors: Hamdy El-Madbouly, Hajar, Radwa
+ * Description: Main Dashboard for Managers.
+ * Integrates multiple data streams to provide a comprehensive view of restaurant performance:
+ * - Live Menu Statistics (Profit calculations, item counts)
+ * - CRUD operations for Menu Items
+ * - AI integration for Daily Reports and Sales Suggestions
+ * - Visual breakdown of BCG Matrix categories (Stars, Plowhorses, etc.)
+ */
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";

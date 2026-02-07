@@ -10,6 +10,18 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+"""
+File: settings.py
+Author: Hamdy El-Madbouly
+Description: Django Project Settings.
+Configures the Menu Engineering backend, including:
+- Database connections (PostgreSQL)
+- Installed Apps (Menu, Users, Knox, CORS)
+- Middleware configuration
+- ML Service integration settings
+- Security settings
+"""
+
 from pathlib import Path
 import os
 

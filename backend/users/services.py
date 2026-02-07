@@ -1,3 +1,11 @@
+"""
+File: services.py
+Author: Hamdy El-Madbouly
+Description: Asynchronous service layer for User management.
+Handles background tasks such as sending verification emails, password reset links,
+and security alerts to prevent blocking the main API thread.
+"""
+
 from .tasks import (
     send_verification_email_task,
     send_forgot_password_email_task,

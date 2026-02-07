@@ -287,6 +287,15 @@ class CoPurchaseAnalyzer:
 # =============================================================================
 
 
+"""
+File: recommendation_engine.py
+Author: Malak
+Description: Logic for generating strategic recommendations.
+This module takes the classification from `menu_classifier.py` and applies business rules
+to generate specific action items (e.g., "Increase Price", "Highlighted Description") for menu optimization.
+"""
+
+
 class RecommendationEngine:
     """
     Profit-optimized menu recommendation system.

@@ -1,5 +1,10 @@
 """
-Service layer for connecting Django to the FastAPI ML service.
+File: services.py
+Authors: Hamdy El-Madbouly, Alaa Amer
+Description: Service layer for integrating with the external ML service.
+This module handles the HTTP communication with the FastAPI ML microservice, including
+error handling, timeout management, and response parsing for AI features like
+description enhancement and sales suggestions.
 
 This service handles AI-powered features only:
 - Description enhancement
@@ -11,6 +16,8 @@ This service handles AI-powered features only:
 Note: Menu item classification (Star/Plowhorse/Puzzle/Dog) is now handled
 locally by the menu_classifier module using the Menu Engineering Matrix algorithm.
 """
+
+from .models import MenuItem
 
 import httpx
 from django.conf import settings

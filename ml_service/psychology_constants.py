@@ -1,11 +1,10 @@
 """
-Menu Engineering AI - Goel-Cheema Model + Behavioral Economics
-
-Based on:
-1. Politecnico di Milano Thesis - Goel-Cheema Real Costing + BCG Matrix
-2. Behavioral Economics Research - Psychological & Mathematical Optimization
-
-This module combines academic research with practical menu optimization.
+File: psychology_constants.py
+Author: Alaa Amer
+Description: Knowledge base for Behavioral Economics and Menu Engineering principles.
+Defines the system prompts and context strings that guide the AI to apply
+Goel-Cheema methodology, BCG Matrix logic, and psychological pricing strategies.
+This file is the "brain" behind the domain-specific AI advice.
 """
 
 # =============================================================================

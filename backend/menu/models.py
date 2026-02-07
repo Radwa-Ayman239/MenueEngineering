@@ -1,3 +1,12 @@
+"""
+File: models.py
+Authors: Hamdy El-Madbouly, Radwa AbouElfotouh
+Description: Defines the database models for the menu application.
+This includes the central MenuItem model, Order tracking, and MenuSection organization.
+These models form the core data structure for the application, supporting both the transaction
+processing (orders) and the analytical features (menu engineering metrics).
+"""
+
 import uuid
 
 from django.db import models
@@ -36,16 +45,14 @@ class MenuItem(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-
     # MODIFICATION: Added external_id to map to 'item_id' in your CSV
     external_id = models.IntegerField(
-        _("External ID"), 
-        unique=True, 
-        null=True, 
+        _("External ID"),
+        unique=True,
+        null=True,
         blank=True,
-        help_text=_("The ID from the source CSV or POS system")
+        help_text=_("The ID from the source CSV or POS system"),
     )
-
 
     title = models.CharField(_("Title"), max_length=255)
     description = models.TextField(_("Description"), blank=True)
@@ -89,7 +96,7 @@ class MenuItem(models.Model):
         blank=True,
         help_text=_("When this item was last analyzed by the AI model"),
     )
-    
+
     # Computed fields (updated periodically or on order)
     total_purchases = models.FloatField(_("Total Purchases"), default=0)
     total_revenue = models.DecimalField(
@@ -98,6 +105,7 @@ class MenuItem(models.Model):
     total_profit = models.DecimalField(
         _("Total Profit"), max_digits=20, decimal_places=2, default=0
     )
+
     class Meta:
         ordering = ["section", "display_order", "title"]
         verbose_name = _("Menu Item")
@@ -105,13 +113,12 @@ class MenuItem(models.Model):
 
         # MODIFICATION: Added index for faster analysis queries
         indexes = [
-            models.Index(fields=['category', 'is_active']),
-            models.Index(fields=['external_id']),
+            models.Index(fields=["category", "is_active"]),
+            models.Index(fields=["external_id"]),
         ]
 
     def __str__(self):
         return f"{self.title} (${self.price})"
-    
 
     @property
     def contribution_margin(self):

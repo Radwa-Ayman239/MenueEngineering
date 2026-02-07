@@ -1,16 +1,13 @@
 """
-AI Service for intelligent menu engineering features using OpenRouter.
+File: openrouter_service.py
+Authors: Hamdy El-Madbouly
+Description: Core integration logic for OpenRouter API.
+Contains the specific prompt engineering and context injection logic for
+each AI feature. It combines the raw AI capabilities with the robust
+psychological frameworks defined in `psychology_constants.py`.
 
-Supports multiple free models:
-- deepseek/deepseek-chat (recommended)
-- mistralai/mistral-7b-instruct
-- meta-llama/llama-3-8b-instruct
-
-Custom Instructions:
-    All functions support a `custom_instructions` parameter to inject
-    additional context or requirements into the prompts.
-
-Enhanced with Behavioral Economics and Mathematical Optimization principles.
+Supports multiple models (DeepSeek, Mistral, Llama) and handles
+mock responses when the API key is not configured.
 """
 
 import os
@@ -84,69 +81,108 @@ def get_client():
         api_key=OPENROUTER_API_KEY,
     )
 
+
 def _get_mock_response(func_name: str, **kwargs) -> dict:
     """Generate mock response when AI service is unavailable."""
     import random
-    
+
     if func_name == "enhance_description":
         return {
             "enhanced_description": f"Succulent {kwargs.get('item_name', 'item')} prepared to perfection. A true delight requiring no further introduction.",
-            "key_selling_points": ["Chef's special recipe", "Locally sourced ingredients", "Perfect for sharing"],
+            "key_selling_points": [
+                "Chef's special recipe",
+                "Locally sourced ingredients",
+                "Perfect for sharing",
+            ],
             "tips": ["Pair with our signature drinks", "Best engaged while warm"],
-            "psychology_applied": ["Sensory language", "Social proof"]
+            "psychology_applied": ["Sensory language", "Social proof"],
         }
-    
+
     elif func_name == "analyze_menu_structure":
         return {
-            "overall_score": 7, 
-            "section_order_recommendation": ["Starters", "Mains", "Desserts"], 
-            "items_to_highlight": [kwargs.get('menu_sections', [{}])[0].get('items', [{}])[0].get('name', 'Item')], 
-            "items_to_reconsider": [], 
-            "general_recommendations": ["Simplify category names", "Use price anchoring"], 
-            "choice_architecture_notes": ["Good use of white space"], 
-            "cognitive_load_assessment": "medium"
+            "overall_score": 7,
+            "section_order_recommendation": ["Starters", "Mains", "Desserts"],
+            "items_to_highlight": [
+                kwargs.get("menu_sections", [{}])[0]
+                .get("items", [{}])[0]
+                .get("name", "Item")
+            ],
+            "items_to_reconsider": [],
+            "general_recommendations": [
+                "Simplify category names",
+                "Use price anchoring",
+            ],
+            "choice_architecture_notes": ["Good use of white space"],
+            "cognitive_load_assessment": "medium",
         }
-        
+
     elif func_name == "generate_sales_suggestions":
-        price = kwargs.get('price', 10)
+        price = kwargs.get("price", 10)
         return {
-            "priority": "medium", 
-            "suggested_price": round(price * 1.1, 2), 
-            "immediate_actions": ["Highlight on menu", "Train staff to upsell"], 
-            "marketing_tips": ["Create a combo deal"], 
-            "estimated_impact": "15% increase in margin", 
-            "margin_optimization": "Slight price increase justified by quality", 
-            "elasticity_assessment": "low price sensitivity"
+            "priority": "medium",
+            "suggested_price": round(price * 1.1, 2),
+            "immediate_actions": ["Highlight on menu", "Train staff to upsell"],
+            "marketing_tips": ["Create a combo deal"],
+            "estimated_impact": "15% increase in margin",
+            "margin_optimization": "Slight price increase justified by quality",
+            "elasticity_assessment": "low price sensitivity",
         }
-        
+
     elif func_name == "get_customer_recommendations":
         return {
             "top_recommendation": {
-                "item": "Chef's Special", 
-                "reason": "It complements your current selection perfectly.", 
-                "pitch": "You must try our Chef's Special, it's a customer favorite.", 
-                "psychology_trigger": "social proof"
-            }, 
-            "alternatives": [{"item": "Seasonal Salad", "reason": "Lighter option"}], 
-            "upsells": [{"item": "Premium Side", "pitch": "Add a premium side for just $3"}], 
-            "compromise_recommendation": {"item": "Standard Burger", "reason": "A classic choice"}
+                "item": "Chef's Special",
+                "reason": "It complements your current selection perfectly.",
+                "pitch": "You must try our Chef's Special, it's a customer favorite.",
+                "psychology_trigger": "social proof",
+            },
+            "alternatives": [{"item": "Seasonal Salad", "reason": "Lighter option"}],
+            "upsells": [
+                {"item": "Premium Side", "pitch": "Add a premium side for just $3"}
+            ],
+            "compromise_recommendation": {
+                "item": "Standard Burger",
+                "reason": "A classic choice",
+            },
         }
-        
+
     elif func_name == "generate_owner_report":
-        period = kwargs.get('period', 'weekly')
+        period = kwargs.get("period", "weekly")
         return {
-            "executive_summary": f"Performance for this {period} has been steady with notable growth in high-margin categories. Customer satisfaction metrics remain positive.", 
-            "highlights": ["Revenue up 5% vs last period", "Star items retention is strong", "Waste reduction targets met"], 
-            "concerns": ["Labor costs slightly above target", "Puzzle items need visibility boost"], 
+            "executive_summary": f"Performance for this {period} has been steady with notable growth in high-margin categories. Customer satisfaction metrics remain positive.",
+            "highlights": [
+                "Revenue up 5% vs last period",
+                "Star items retention is strong",
+                "Waste reduction targets met",
+            ],
+            "concerns": [
+                "Labor costs slightly above target",
+                "Puzzle items need visibility boost",
+            ],
             "top_recommendations": [
-                {"action": "Promote seasonal specials", "impact": "High revenue potential", "effort": "low", "priority_score": 9},
-                {"action": "Review inventory levels", "impact": "Cost saving", "effort": "medium", "priority_score": 7}
-            ], 
-            "next_steps": ["Schedule staff training", "Update digital menu board"], 
-            "trade_offs": ["Higher marketing spend required for growth"], 
-            "multi_objective_score": {"revenue": 8, "margin": 7, "satisfaction": 9, "simplicity": 8}
+                {
+                    "action": "Promote seasonal specials",
+                    "impact": "High revenue potential",
+                    "effort": "low",
+                    "priority_score": 9,
+                },
+                {
+                    "action": "Review inventory levels",
+                    "impact": "Cost saving",
+                    "effort": "medium",
+                    "priority_score": 7,
+                },
+            ],
+            "next_steps": ["Schedule staff training", "Update digital menu board"],
+            "trade_offs": ["Higher marketing spend required for growth"],
+            "multi_objective_score": {
+                "revenue": 8,
+                "margin": 7,
+                "satisfaction": 9,
+                "simplicity": 8,
+            },
         }
-        
+
     return {"error": "Mock response not implemented"}
 
 
@@ -222,12 +258,10 @@ async def enhance_description(
     Returns:
         dict with enhanced_description, key_selling_points, tips, psychology_applied
     """
-    
+
     if not OPENROUTER_API_KEY:
         return _get_mock_response(
-            "enhance_description", 
-            item_name=item_name, 
-            price=price
+            "enhance_description", item_name=item_name, price=price
         )
 
     # Get category-specific psychological guidance
@@ -307,12 +341,9 @@ async def analyze_menu_structure(
         custom_instructions: Additional instructions
         focus_areas: Specific areas to focus on (e.g., ["pricing", "layout", "naming"])
     """
-    
+
     if not OPENROUTER_API_KEY:
-        return _get_mock_response(
-            "analyze_menu_structure", 
-            menu_sections=menu_sections
-        )
+        return _get_mock_response("analyze_menu_structure", menu_sections=menu_sections)
 
     menu_summary = []
     for section in menu_sections:
@@ -379,12 +410,10 @@ async def generate_sales_suggestions(
         custom_instructions: Additional instructions
         strategy: "aggressive", "balanced", or "conservative"
     """
-    
+
     if not OPENROUTER_API_KEY:
         return _get_mock_response(
-            "generate_sales_suggestions", 
-            item_name=item_name, 
-            price=price
+            "generate_sales_suggestions", item_name=item_name, price=price
         )
 
     margin = price - cost
@@ -461,11 +490,10 @@ async def get_customer_recommendations(
         custom_instructions: Additional instructions
         upsell_aggressiveness: "low", "medium", or "high"
     """
-    
+
     if not OPENROUTER_API_KEY:
         return _get_mock_response(
-            "get_customer_recommendations", 
-            current_items=current_items
+            "get_customer_recommendations", current_items=current_items
         )
 
     menu_summary = [
@@ -521,12 +549,9 @@ async def generate_owner_report(
         custom_instructions: Additional instructions
         report_style: "executive" (brief) or "detailed" (comprehensive)
     """
-    
+
     if not OPENROUTER_API_KEY:
-        return _get_mock_response(
-            "generate_owner_report", 
-            period=period
-        )
+        return _get_mock_response("generate_owner_report", period=period)
 
     style_text = ""
     if report_style == "detailed":

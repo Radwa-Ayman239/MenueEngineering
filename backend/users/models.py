@@ -1,3 +1,11 @@
+"""
+File: models.py
+Authors: Hamdy El-Madbouly, Radwa AbouElfotouh
+Description: Custom User model definition.
+Extends Django's AbstractUser to include role-based access control (Admin, Manager, Staff)
+and phone number fields for SMS-based Two-Factor Authentication (2FA).
+"""
+
 import uuid
 
 from django.db import models

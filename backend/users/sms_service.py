@@ -1,6 +1,10 @@
 """
-SMS Service for sending OTP via Twilio.
-Falls back to console logging in development mode.
+File: sms_service.py
+Author: Hamdy El-Madbouly
+Description: SMS Service for sending OTP via Twilio.
+Encapsulates the logic for interacting with the Twilio API to send 2FA codes.
+Includes a development fallback mode that logs OTPs to the console when
+API credentials are not configured.
 """
 
 from django.conf import settings

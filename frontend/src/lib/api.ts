@@ -1,3 +1,13 @@
+/**
+ * File: api.ts
+ * Author: Hamdy El-Madbouly
+ * Description: Centralized API Client Service.
+ * Handles all HTTP communication with the backend, including:
+ * - JWT Token management (storage, retrieval, injection)
+ * - Standardized error handling and response parsing
+ * - Typed methods for all API endpoints (Auth, Menu, Orders, AI)
+ */
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 type RequestOptions = RequestInit & {

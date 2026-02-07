@@ -1,15 +1,10 @@
 """
-Menu Engineering Matrix Classification Service.
-
-This module implements the standard Menu Engineering Matrix algorithm
-to classify menu items into four categories:
-- Star: High popularity + High profitability
-- Plowhorse: High popularity + Low profitability
-- Puzzle: Low popularity + High profitability
-- Dog: Low popularity + Low profitability
-
-The algorithm uses threshold-based classification rather than ML,
-as this is a deterministic business logic problem.
+File: menu_classifier.py
+Author: Malak
+Description: Menu Engineering Matrix Classification Service.
+Implements the standard algorithm to classify menu items into Stars, Plowhorses,
+Puzzles, and Dogs based on popularity and profitability thresholds.
+Deterministic logic separate from the ML service.
 """
 
 from dataclasses import dataclass

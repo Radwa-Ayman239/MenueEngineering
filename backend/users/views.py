@@ -1,5 +1,9 @@
 """
-API Views for 2FA authentication system.
+File: views.py
+Author: Hamdy El-Madbouly
+Description: API Views for User Authentication and Management.
+Handles user registration, login (including 2FA/OTP verification), logout, and profile updates.
+Uses Knox for token-based authentication to ensure secure stateless sessions.
 """
 
 from rest_framework import status
@@ -37,14 +41,14 @@ class CreateUserView(APIView):
     @extend_schema(
         summary="Create New User",
         description="Admin creates Managers/Staff, Managers create Staff only. Sends activation email.",
-        tags=['User Management'],
+        tags=["User Management"],
         request=CreateUserSerializer,
         responses={
             201: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
             403: OpenApiTypes.OBJECT,
         },
-        auth=[{'TokenAuthentication': []}]
+        auth=[{"TokenAuthentication": []}],
     )
     def post(self, request):
         serializer = CreateUserSerializer(
@@ -75,12 +79,12 @@ class ActivateAccountView(APIView):
     @extend_schema(
         summary="Activate Account",
         description="Set password and activate account using email verification token.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=ActivateAccountSerializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = ActivateAccountSerializer(data=request.data)
@@ -99,12 +103,12 @@ class ResendActivationView(APIView):
     @extend_schema(
         summary="Resend Activation Email",
         description="Send activation email to unverified user.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=ResendActivationSerializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = ResendActivationSerializer(data=request.data)
@@ -123,12 +127,12 @@ class LoginStep1View(APIView):
     @extend_schema(
         summary="Login Step 1 - Send OTP",
         description="Validate email/password, send OTP via SMS. Returns session token for step 2.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=LoginStep1Serializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = LoginStep1Serializer(
@@ -149,12 +153,12 @@ class LoginStep2View(APIView):
     @extend_schema(
         summary="Login Step 2 - Verify OTP",
         description="Verify OTP from SMS, returns access/refresh tokens.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=LoginStep2Serializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = LoginStep2Serializer(data=request.data)
@@ -173,12 +177,12 @@ class RefreshTokenView(APIView):
     @extend_schema(
         summary="Refresh Access Token",
         description="Use refresh token to obtain new access token.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=RefreshTokenSerializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = RefreshTokenSerializer(data=request.data)
@@ -197,12 +201,12 @@ class ForgotPasswordRequestView(APIView):
     @extend_schema(
         summary="Request Password Reset",
         description="Send password reset link to email. Returns generic success message for security.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=ForgotPasswordRequestSerializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = ForgotPasswordRequestSerializer(data=request.data)
@@ -226,12 +230,12 @@ class ForgotPasswordResetView(APIView):
     @extend_schema(
         summary="Reset Password",
         description="Reset user password using token from email. Requires matching passwords.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=ForgotPasswordResetSerializer,
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
-        }
+        },
     )
     def post(self, request):
         serializer = ForgotPasswordResetSerializer(data=request.data)
@@ -251,13 +255,13 @@ class LogoutView(APIView):
     @extend_schema(
         summary="Logout",
         description="Logout user and invalidate their tokens.",
-        tags=['Authentication'],
+        tags=["Authentication"],
         request=None,
         responses={
             200: OpenApiTypes.OBJECT,
             401: OpenApiTypes.OBJECT,
         },
-        auth=[{'TokenAuthentication': []}]
+        auth=[{"TokenAuthentication": []}],
     )
     def post(self, request):
         # Delete all tokens for this user

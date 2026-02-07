@@ -1,3 +1,14 @@
+"""
+File: tasks.py
+Author: Hamdy El-Madbouly
+Description: Async Background Tasks.
+Defines Celery tasks for handling time-consuming operations off the main thread:
+- Sending verification emails
+- Sending password reset emails
+- Sending security alerts
+- Dispatching SMS OTPs via Twilio
+"""
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model

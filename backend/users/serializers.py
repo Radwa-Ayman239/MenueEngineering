@@ -1,5 +1,9 @@
 """
-Serializers for 2FA authentication system.
+File: serializers.py
+Author: Hamdy El-Madbouly
+Description: Serializers for User data and Authentication payloads.
+Includes logic for validating registration data, ensuring password strength,
+and formatting user profiles for API responses.
 
 User Creation Flow:
 1. Admin/Manager creates user (email, phone, name, type) - NO password
@@ -7,8 +11,8 @@ User Creation Flow:
 3. User sets password via activation endpoint
 
 Login Flow (2FA):
-1. User enters email + password → receives OTP via SMS
-2. User enters OTP → receives access token
+1. User enters email + password -> receives OTP via SMS
+2. User enters OTP -> receives access token
 """
 
 from datetime import timedelta
@@ -172,9 +176,11 @@ class LoginStep1Serializer(serializers.Serializer):
                 code="invalid",
             )
         ],
-        help_text="User's registered email address (e.g., john.doe@example.com)"
+        help_text="User's registered email address (e.g., john.doe@example.com)",
     )
-    password = serializers.CharField(write_only=True, help_text="User's account password (e.g., MySecurePass123!)")
+    password = serializers.CharField(
+        write_only=True, help_text="User's account password (e.g., MySecurePass123!)"
+    )
 
     # Response fields
     message = serializers.CharField(read_only=True)
@@ -475,7 +481,7 @@ class ForgotPasswordResetSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"password": "Passwords do not match"}, code="passwords_not_match"
             )
-        
+
         # Then validate token
         token = attrs.get("token")
         user_id = TokenManager.validate_password_reset_token(token)
@@ -489,7 +495,7 @@ class ForgotPasswordResetSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"token": "User not found"}, code="user_not_found"
             )
-        
+
         attrs["user"] = user
         return attrs
 
