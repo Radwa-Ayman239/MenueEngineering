@@ -635,14 +635,14 @@ class SalesSuggestionsView(APIView):
             price = request.data.get("price")
             cost = request.data.get("cost")
             purchases = request.data.get("purchases")
-            
+
             # Validate required fields when not using item_id
             if not item_name or price is None or cost is None or purchases is None:
                 return Response(
                     {"error": "item_name, price, cost, and purchases are required"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             price = float(price)
             cost = float(cost)
             purchases = int(purchases)
@@ -865,3 +865,207 @@ class OwnerReportView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+
+# ============ Recommendation Views ============
+
+
+class RecommendationViewSet(viewsets.ViewSet):
+    """
+    ViewSet for AI-powered menu recommendations.
+
+    Endpoints:
+    - GET /recommendations/ - Get general recommendations
+    - POST /recommendations/for-cart/ - Get recommendations based on cart items
+    - GET /items/{id}/frequently-together/ - Get frequently bought together items
+    """
+
+    def get_permissions(self):
+        # All recommendation endpoints are public (for customer use)
+        return [AllowAny()]
+
+    def get_authenticators(self):
+        # Allow unauthenticated access for all recommendation endpoints
+        return []
+
+    def list(self, request):
+        """
+        Get general menu recommendations.
+
+        Query Parameters:
+        - limit: Number of recommendations (default 5, max 20)
+        - strategy: Recommendation strategy (balanced, upsell, cross_sell)
+        - section_id: Filter to specific section
+        """
+        from .recommendation_engine import recommendation_engine
+
+        limit = min(int(request.query_params.get("limit", 5)), 20)
+        strategy = request.query_params.get("strategy", "balanced")
+        section_id = request.query_params.get("section_id")
+
+        recommendations = recommendation_engine.get_recommendations(
+            limit=limit,
+            strategy=strategy,
+            section_id=section_id,
+        )
+
+        # Serialize results
+        results = []
+        for rec in recommendations:
+            results.append(
+                {
+                    "item": {
+                        "id": rec.item.id,
+                        "title": rec.item.title,
+                        "price": rec.item.price,
+                        "category": rec.item.category,
+                        "section_name": (
+                            rec.item.section.name if rec.item.section else None
+                        ),
+                    },
+                    "score": rec.score,
+                    "reason": rec.reason,
+                    "category_score": rec.category_score,
+                    "margin_score": rec.margin_score,
+                    "copurchase_score": rec.copurchase_score,
+                    "popularity_score": rec.popularity_score,
+                    "context_score": rec.context_score,
+                    "profit_impact": rec.profit_impact,
+                }
+            )
+
+        return Response({"recommendations": results})
+
+    @action(detail=False, methods=["post"], url_path="for-cart")
+    def for_cart(self, request):
+        """
+        Get recommendations based on current cart items.
+
+        Request Body:
+        {
+            "item_ids": ["uuid1", "uuid2", ...],
+            "limit": 5,
+            "strategy": "balanced"  // balanced, upsell, cross_sell
+        }
+
+        Returns recommendations with total potential margin increase.
+        """
+        from .recommendation_engine import recommendation_engine
+        from .serializers import CartRecommendationRequestSerializer
+        from decimal import Decimal
+
+        serializer = CartRecommendationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        item_ids = serializer.validated_data.get("item_ids", [])
+        limit = serializer.validated_data.get("limit", 5)
+        strategy = serializer.validated_data.get("strategy", "balanced")
+
+        recommendations = recommendation_engine.get_recommendations(
+            current_items=item_ids,
+            limit=limit,
+            strategy=strategy,
+        )
+
+        # Calculate total potential margin
+        total_margin = Decimal("0")
+        results = []
+        for rec in recommendations:
+            if rec.profit_impact:
+                total_margin += rec.profit_impact
+            results.append(
+                {
+                    "item": {
+                        "id": rec.item.id,
+                        "title": rec.item.title,
+                        "price": rec.item.price,
+                        "category": rec.item.category,
+                        "section_name": (
+                            rec.item.section.name if rec.item.section else None
+                        ),
+                    },
+                    "score": rec.score,
+                    "reason": rec.reason,
+                    "category_score": rec.category_score,
+                    "margin_score": rec.margin_score,
+                    "copurchase_score": rec.copurchase_score,
+                    "popularity_score": rec.popularity_score,
+                    "context_score": rec.context_score,
+                    "profit_impact": rec.profit_impact,
+                }
+            )
+
+        return Response(
+            {
+                "recommendations": results,
+                "total_potential_margin": total_margin,
+            }
+        )
+
+
+class FrequentlyBoughtTogetherView(APIView):
+    """
+    Get items frequently bought together with a specific item.
+
+    GET /items/{item_id}/frequently-together/
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, item_id):
+        """
+        Get frequently bought together items for a menu item.
+
+        Query Parameters:
+        - limit: Number of associations to return (default 3, max 10)
+        """
+        from .recommendation_engine import recommendation_engine
+        from .models import MenuItem
+
+        limit = min(int(request.query_params.get("limit", 3)), 10)
+
+        # Get the source item
+        try:
+            source_item = MenuItem.objects.get(id=item_id, is_active=True)
+        except MenuItem.DoesNotExist:
+            return Response(
+                {"error": "Menu item not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get frequently bought together
+        associations = recommendation_engine.get_frequently_bought_together(
+            item_id, limit=limit
+        )
+
+        # Format response
+        fbt_items = []
+        for assoc in associations:
+            fbt_items.append(
+                {
+                    "item": {
+                        "id": assoc.item.id,
+                        "title": assoc.item.title,
+                        "price": assoc.item.price,
+                        "category": assoc.item.category,
+                        "section_name": (
+                            assoc.item.section.name if assoc.item.section else None
+                        ),
+                    },
+                    "confidence": round(assoc.confidence, 3),
+                    "lift": round(assoc.lift, 2),
+                    "support": round(assoc.support, 4),
+                    "order_count": assoc.order_count,
+                    "message": assoc.message,
+                }
+            )
+
+        return Response(
+            {
+                "source_item": {
+                    "id": source_item.id,
+                    "title": source_item.title,
+                },
+                "frequently_bought_together": fbt_items,
+            }
+        )

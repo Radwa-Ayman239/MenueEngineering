@@ -327,3 +327,78 @@ class CustomerActivityCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerActivity
         fields = ["session_id", "event_type", "menu_item", "metadata"]
+
+
+# ============ Recommendation Serializers ============
+
+
+class RecommendationItemSerializer(serializers.Serializer):
+    """Serializer for a recommended menu item."""
+
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    category = serializers.CharField(allow_null=True)
+    section_name = serializers.CharField()
+
+
+class RecommendationResultSerializer(serializers.Serializer):
+    """Serializer for a recommendation result with scoring details."""
+
+    item = RecommendationItemSerializer()
+    score = serializers.FloatField()
+    reason = serializers.CharField()
+    category_score = serializers.FloatField()
+    margin_score = serializers.FloatField()
+    copurchase_score = serializers.FloatField()
+    popularity_score = serializers.FloatField()
+    context_score = serializers.FloatField()
+    profit_impact = serializers.DecimalField(
+        max_digits=10, decimal_places=2, allow_null=True
+    )
+
+
+class CoPurchaseItemSerializer(serializers.Serializer):
+    """Serializer for co-purchase association."""
+
+    item = RecommendationItemSerializer()
+    confidence = serializers.FloatField()
+    lift = serializers.FloatField()
+    support = serializers.FloatField()
+    order_count = serializers.IntegerField()
+    message = serializers.CharField()
+
+
+class FrequentlyBoughtTogetherSerializer(serializers.Serializer):
+    """Serializer for frequently bought together response."""
+
+    source_item = MenuItemListSerializer()
+    frequently_bought_together = CoPurchaseItemSerializer(many=True)
+
+
+class CartRecommendationRequestSerializer(serializers.Serializer):
+    """Request serializer for cart-based recommendations."""
+
+    item_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=[],
+        help_text="List of item UUIDs currently in cart",
+    )
+    limit = serializers.IntegerField(
+        required=False, default=5, min_value=1, max_value=20
+    )
+    strategy = serializers.ChoiceField(
+        choices=["balanced", "upsell", "cross_sell"],
+        required=False,
+        default="balanced",
+    )
+
+
+class CartRecommendationResponseSerializer(serializers.Serializer):
+    """Response serializer for cart-based recommendations."""
+
+    recommendations = RecommendationResultSerializer(many=True)
+    total_potential_margin = serializers.DecimalField(
+        max_digits=10, decimal_places=2, allow_null=True
+    )

@@ -85,7 +85,7 @@ class MenuItemModelTests(TestCase):
         """Test basic item creation."""
         self.assertEqual(self.item.title, "Cheeseburger")
         self.assertEqual(self.item.section, self.section)
-        self.assertEqual(self.item.category, "star")
+        self.assertEqual(self.item.category, MenuItem.CategoryChoices.STAR)
         self.assertTrue(self.item.is_active)
 
     def test_str_representation(self):
@@ -212,7 +212,9 @@ class OrderModelTests(TestCase):
             cost=Decimal("1.50"),
             section=self.section,
         )
-        self.order = Order.objects.create(created_by=self.user, table_number="5", created_at=timezone.now())
+        self.order = Order.objects.create(
+            created_by=self.user, table_number="5", created_at=timezone.now()
+        )
 
     def test_create_order(self):
         """Test basic order creation."""
@@ -274,7 +276,9 @@ class OrderModelTests(TestCase):
             last_name="User",
             phone_number="+9999999999",
         )
-        order = Order.objects.create(created_by=user, table_number="1", created_at=timezone.now())
+        order = Order.objects.create(
+            created_by=user, table_number="1", created_at=timezone.now()
+        )
         user.delete()
         order.refresh_from_db()
         self.assertIsNone(order.created_by)

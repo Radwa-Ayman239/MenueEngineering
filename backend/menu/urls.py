@@ -18,6 +18,9 @@ from .views import (
     MenuStructureAnalysisView,
     CustomerRecommendationsView,
     OwnerReportView,
+    # Recommendation Views
+    RecommendationViewSet,
+    FrequentlyBoughtTogetherView,
 )
 
 app_name = "menu"
@@ -27,6 +30,7 @@ router.register(r"sections", MenuSectionViewSet, basename="section")
 router.register(r"items", MenuItemViewSet, basename="item")
 router.register(r"orders", OrderViewSet, basename="order")
 router.register(r"activities", CustomerActivityViewSet, basename="activity")
+router.register(r"recommendations", RecommendationViewSet, basename="recommendation")
 
 urlpatterns = [
     path("", include(router.urls)),
@@ -54,4 +58,10 @@ urlpatterns = [
         name="ai-recommendations",
     ),
     path("ai/owner-report/", OwnerReportView.as_view(), name="ai-owner-report"),
+    # Recommendation Engine Endpoints
+    path(
+        "items/<uuid:item_id>/frequently-together/",
+        FrequentlyBoughtTogetherView.as_view(),
+        name="item-frequently-together",
+    ),
 ]
