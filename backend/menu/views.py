@@ -8,6 +8,7 @@ Permissions:
 """
 
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination  
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, SAFE_METHODS
@@ -16,6 +17,7 @@ from knox.auth import TokenAuthentication
 from django.utils import timezone
 from django.db.models import Sum, Count
 from drf_spectacular.utils import extend_schema
+
 
 from .models import MenuSection, MenuItem, Order, CustomerActivity
 from .serializers import (
@@ -39,6 +41,11 @@ from .permissions import (
     IsStaffOrAbove,
 )
 
+# 1. Define the Pagination Class first
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 50 
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 # ============ Menu Section Views ============
 
@@ -277,6 +284,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
                 "total_items": MenuItem.objects.filter(is_active=True).count(),
             }
         )
+    
 
 
 # ============ Order Views ============
