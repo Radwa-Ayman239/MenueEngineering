@@ -6,6 +6,7 @@ Tests validation, edge cases, and all serializer types.
 from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.test import APIRequestFactory
 
 from ..models import MenuSection, MenuItem, Order, OrderItem, CustomerActivity
@@ -270,7 +271,7 @@ class OrderSerializerTests(TestCase):
             section=self.section,
         )
         self.order = Order.objects.create(
-            created_by=self.user, table_number="5", notes="Test order"
+            created_by=self.user, table_number="5", notes="Test order", created_at=timezone.now()
         )
         self.order_item = OrderItem.objects.create(
             order=self.order,
@@ -427,7 +428,7 @@ class OrderItemSerializerTests(TestCase):
             cost=Decimal("5.00"),
             section=self.section,
         )
-        self.order = Order.objects.create()
+        self.order = Order.objects.create(created_at=timezone.now())
         self.order_item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.item,

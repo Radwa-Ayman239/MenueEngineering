@@ -1,12 +1,10 @@
-# This directory contains trained ML models
-# Do not commit large model files to git - use Git LFS or model registry instead
+# Models Directory
 
-# Required files:
-# - menu_classifier.joblib   (Decision Tree model from notebook)
-# - label_encoder.joblib     (Label encoder for category names)
+This directory is no longer used for ML model files.
 
-# To generate these files, run the following in your notebook:
-#
-# import joblib
-# joblib.dump(model, "models/menu_classifier.joblib")
-# joblib.dump(label_encoder, "models/label_encoder.joblib")
+The menu item classification (Star/Plowhorse/Puzzle/Dog) is now handled
+by the Django backend using the Menu Engineering Matrix algorithm.
+
+See: `backend/menu/menu_classifier.py`
+
+The ML service is now focused only on AI-powered features using OpenRouter/DeepSeek.

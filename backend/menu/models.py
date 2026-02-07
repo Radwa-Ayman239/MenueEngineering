@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -164,7 +165,7 @@ class Order(models.Model):
     )
     tax = models.DecimalField(_("Tax"), max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(_("Total"), max_digits=10, decimal_places=2, default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

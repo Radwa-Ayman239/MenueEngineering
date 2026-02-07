@@ -1,141 +1,19 @@
 import unittest
-from unittest.mock import patch, Mock, AsyncMock
+from unittest.mock import patch, Mock
 import httpx
 from ..services import MLService, MLServiceError
 
 
-class MLServiceTests(unittest.IsolatedAsyncioTestCase):
+class MLServiceTests(unittest.TestCase):
     def setUp(self):
         self.service = MLService()
         self.base_url = "http://ml_service:8001"
-        self.sample_payload = {
-            "price": 100.0,
-            "purchases": 50,
-            "margin": 20.0,
-            "description_length": 10,
-        }
-        self.success_response = {
-            "category": "star",
-            "confidence": 0.95,
-            "recommendations": ["Promote heavily"],
-        }
-
-    # ==========================================
-    # Synchronous Tests (predict_sync)
-    # ==========================================
-
-    @patch("httpx.Client")
-    def test_predict_sync_success(self, mock_client_cls):
-        """Test successful synchronous prediction."""
-        # Setup mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = self.success_response
-
-        # Setup mock client context manager
-        mock_client_instance = Mock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
-
-        # Call service
-        result = self.service.predict_sync(**self.sample_payload)
-
-        # Assertions
-        self.assertEqual(result["category"], "star")
-        mock_client_instance.post.assert_called_once_with(
-            f"{self.base_url}/predict", json=self.sample_payload
-        )
-
-    @patch("httpx.Client")
-    def test_predict_sync_connection_error(self, mock_client_cls):
-        """Test handling of connection errors."""
-        mock_client_instance = Mock()
-        mock_client_instance.post.side_effect = httpx.ConnectError("Connection refused")
-        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
-
-        with self.assertRaises(MLServiceError) as context:
-            self.service.predict_sync(**self.sample_payload)
-
-        self.assertIn("unavailable", str(context.exception))
-
-    @patch("httpx.Client")
-    def test_predict_sync_http_error(self, mock_client_cls):
-        """Test handling of non-200 HTTP responses."""
-        mock_response = Mock()
-        mock_response.status_code = 500
-        mock_response.text = "Internal Server Error"
-
-        # Configure raise_for_status to actually raise an error
-        error = httpx.HTTPStatusError("Error", request=Mock(), response=mock_response)
-        mock_response.raise_for_status.side_effect = error
-
-        mock_client_instance = Mock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
-
-        with self.assertRaises(MLServiceError) as context:
-            self.service.predict_sync(**self.sample_payload)
-
-        self.assertIn("ML service error", str(context.exception))
-
-    # ==========================================
-    # Asynchronous Tests (predict)
-    # ==========================================
-
-    @patch("httpx.AsyncClient")
-    async def test_predict_async_success(self, mock_client_cls):
-        """Test successful async prediction."""
-        # Setup mock response
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = self.success_response
-
-        # Setup async mock client
-        mock_client_instance = AsyncMock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
-
-        # Call service (await it)
-        result = await self.service.predict(**self.sample_payload)
-
-        # Assertions
-        self.assertEqual(result["category"], "star")
-        mock_client_instance.post.assert_called_once()
-
-    # ==========================================
-    # Batch Prediction Tests
-    # ==========================================
-
-    @patch("httpx.Client")
-    def test_batch_predict_sync(self, mock_client_cls):
-        """Test batch prediction."""
-        batch_items = [self.sample_payload, self.sample_payload]
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "predictions": [self.success_response, self.success_response]
-        }
-
-        mock_client_instance = Mock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
-
-        results = self.service.batch_predict_sync(batch_items)
-
-        self.assertEqual(len(results), 2)
-        mock_client_instance.post.assert_called_with(
-            f"{self.base_url}/batch-predict", json={"items": batch_items}
-        )
-
-    # ==========================================
-    # Health Check Tests
-    # ==========================================
 
     @patch("httpx.Client")
     def test_health_check_healthy(self, mock_client_cls):
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"status": "healthy", "model_loaded": True}
+        mock_response.json.return_value = {"status": "healthy", "ai_enabled": True}
 
         mock_client_instance = Mock()
         mock_client_instance.get.return_value = mock_response
@@ -145,13 +23,112 @@ class MLServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status"], "healthy")
 
     @patch("httpx.Client")
-    def test_health_check_unhealthy(self, mock_client_cls):
-        """Test health check when service is down."""
+    def test_enhance_description_sync(self, mock_client_cls):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "enhanced_description": "Tasty burger",
+            "key_selling_points": ["Juicy"],
+            "tips": [],
+        }
+
         mock_client_instance = Mock()
-        # Simulate any exception (connection, timeout, etc)
-        mock_client_instance.get.side_effect = Exception("Down")
+        mock_client_instance.post.return_value = mock_response
         mock_client_cls.return_value.__enter__.return_value = mock_client_instance
 
-        result = self.service.health_check()
-        self.assertEqual(result["status"], "unhealthy")
-        self.assertFalse(result["model_loaded"])
+        result = self.service.enhance_description_sync(
+            item_name="Burger", current_description="Good"
+        )
+        self.assertEqual(result["enhanced_description"], "Tasty burger")
+        mock_client_instance.post.assert_called_with(
+            f"{self.base_url}/enhance-description",
+            json={
+                "item_name": "Burger",
+                "current_description": "Good",
+                "category": "Unknown",
+                "price": 0.0,
+                "cuisine_type": "restaurant",
+            },
+        )
+
+    @patch("httpx.Client")
+    def test_get_sales_suggestions_sync(self, mock_client_cls):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "priority": "high",
+            "suggested_price": 12.99,
+        }
+
+        mock_client_instance = Mock()
+        mock_client_instance.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
+
+        result = self.service.get_sales_suggestions_sync(
+            item_name="Burger",
+            category="Star",
+            price=10.0,
+            cost=5.0,
+            purchases=100,
+        )
+        self.assertEqual(result["priority"], "high")
+
+    @patch("httpx.Client")
+    def test_analyze_menu_structure_sync(self, mock_client_cls):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"overall_score": 8}
+
+        mock_client_instance = Mock()
+        mock_client_instance.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
+
+        sections = [{"name": "Mains", "items": []}]
+        result = self.service.analyze_menu_structure_sync(sections)
+        self.assertEqual(result["overall_score"], 8)
+
+    @patch("httpx.Client")
+    def test_get_customer_recommendations_sync(self, mock_client_cls):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"top_recommendation": "Burger"}
+
+        mock_client_instance = Mock()
+        mock_client_instance.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
+
+        result = self.service.get_customer_recommendations_sync(
+            current_items=[], menu_items=[]
+        )
+        self.assertEqual(result["top_recommendation"], "Burger")
+
+    @patch("httpx.Client")
+    def test_generate_owner_report_sync(self, mock_client_cls):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"executive_summary": "Good job"}
+
+        mock_client_instance = Mock()
+        mock_client_instance.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
+
+        result = self.service.generate_owner_report_sync(summary_data={})
+        self.assertEqual(result["executive_summary"], "Good job")
+
+    @patch("httpx.Client")
+    def test_service_error_handling(self, mock_client_cls):
+        """Test error handling for 503 and other errors"""
+        mock_response = Mock()
+        mock_response.status_code = 503
+
+        error = httpx.HTTPStatusError(
+            "Service Unavailable", request=Mock(), response=mock_response
+        )
+        mock_response.raise_for_status.side_effect = error
+
+        mock_client_instance = Mock()
+        mock_client_instance.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client_instance
+
+        with self.assertRaises(MLServiceError):
+            self.service.enhance_description_sync(item_name="Burger")

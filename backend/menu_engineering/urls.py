@@ -39,5 +39,5 @@ urlpatterns = [
         name="redoc",
     ),
     path("api/users/", include("users.urls", namespace="users")),
-    path("api/menu/", include("menu.urls")),
+    path("api/menu/", include("menu.urls", namespace="menu")),
 ]

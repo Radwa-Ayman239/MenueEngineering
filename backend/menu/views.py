@@ -33,6 +33,7 @@ from .serializers import (
     CustomerActivityCreateSerializer,
 )
 from .services import ml_service, MLServiceError
+from .menu_classifier import classify_menu_item, classify_menu_items_batch
 from .permissions import (
     IsAdminOrManager,
     IsStaffOrAbove,
@@ -175,95 +176,86 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         responses={200: MenuItemAnalysisSerializer},
-        description="Run AI analysis on a menu item. Managers only.",
+        description="Run Menu Engineering analysis on a menu item. Managers only.",
     )
     @action(detail=True, methods=["post"])
     def analyze(self, request, pk=None):
         """
-        Analyze a single menu item using the ML service.
+        Analyze a single menu item using the Menu Engineering Matrix.
 
         Returns category (Star/Plowhorse/Puzzle/Dog), confidence score, and recommendations.
         """
         item = self.get_object()
 
-        try:
-            # Call ML service
-            result = ml_service.predict_sync(
-                price=float(item.price),
-                purchases=item.total_purchases,
-                margin=float(item.margin),
-                description_length=len(item.description) if item.description else 0,
-            )
+        # Use local classifier
+        result = classify_menu_item(
+            purchases=item.total_purchases,
+            price=float(item.price),
+            cost=float(item.cost),
+            description_length=len(item.description) if item.description else 0,
+        )
 
-            # Update item with prediction
-            item.category = result["category"].lower()
-            item.ai_confidence = result["confidence"]
-            item.last_analyzed = timezone.now()
-            item.save(update_fields=["category", "ai_confidence", "last_analyzed"])
+        # Update item with classification
+        item.category = result["category"].lower()
+        item.ai_confidence = result["confidence"]
+        item.last_analyzed = timezone.now()
+        item.save(update_fields=["category", "ai_confidence", "last_analyzed"])
 
-            return Response(
-                {
-                    "id": str(item.id),
-                    "title": item.title,
-                    "category": result["category"],
-                    "confidence": result["confidence"],
-                    "recommendations": result["recommendations"],
-                }
-            )
-
-        except MLServiceError as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+        return Response(
+            {
+                "id": str(item.id),
+                "title": item.title,
+                "category": result["category"],
+                "confidence": result["confidence"],
+                "recommendations": result["recommendations"],
+                "metrics": result["metrics"],
+            }
+        )
 
     @extend_schema(description="Analyze all active menu items. Managers only.")
     @action(detail=False, methods=["post"])
     def bulk_analyze(self, request):
         """
-        Analyze all active menu items using the ML service.
+        Analyze all active menu items using the Menu Engineering Matrix.
+        Uses batch averages for more accurate threshold-based classification.
         """
-        items = MenuItem.objects.filter(is_active=True)
+        items = list(MenuItem.objects.filter(is_active=True))
 
-        if not items.exists():
+        if not items:
             return Response({"message": "No items to analyze"})
 
         # Prepare batch data
         batch_data = [
             {
-                "price": float(item.price),
                 "purchases": item.total_purchases,
-                "margin": float(item.margin),
+                "price": float(item.price),
+                "cost": float(item.cost),
                 "description_length": len(item.description) if item.description else 0,
             }
             for item in items
         ]
 
-        try:
-            predictions = ml_service.batch_predict_sync(batch_data)
+        # Classify using batch averages for thresholds
+        predictions = classify_menu_items_batch(batch_data)
 
-            # Update all items
-            results = []
-            for item, prediction in zip(items, predictions):
-                item.category = prediction["category"].lower()
-                item.ai_confidence = prediction["confidence"]
-                item.last_analyzed = timezone.now()
-                item.save(update_fields=["category", "ai_confidence", "last_analyzed"])
+        # Update all items
+        results = []
+        for item, prediction in zip(items, predictions):
+            item.category = prediction["category"].lower()
+            item.ai_confidence = prediction["confidence"]
+            item.last_analyzed = timezone.now()
+            item.save(update_fields=["category", "ai_confidence", "last_analyzed"])
 
-                results.append(
-                    {
-                        "id": str(item.id),
-                        "title": item.title,
-                        "category": prediction["category"],
-                        "confidence": prediction["confidence"],
-                    }
-                )
-
-            return Response({"analyzed_count": len(results), "results": results})
-
-        except MLServiceError as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            results.append(
+                {
+                    "id": str(item.id),
+                    "title": item.title,
+                    "category": prediction["category"],
+                    "confidence": prediction["confidence"],
+                }
             )
+
+        return Response({"analyzed_count": len(results), "results": results})
 
     @extend_schema(description="Get menu item statistics. Managers only.")
     @action(detail=False, methods=["get"])
@@ -530,3 +522,346 @@ class PublicMenuView(APIView):
             )
 
         return Response({"menu": menu})
+
+
+# ============ AI-Powered Views ============
+
+
+class EnhanceDescriptionView(APIView):
+    """
+    Use AI to enhance a menu item's description.
+
+    Permissions: Managers and Admins only
+    Method: POST
+
+    Request body:
+        {
+            "item_id": "uuid" (optional, to auto-fetch item details),
+            "item_name": "string",
+            "current_description": "string",
+            "category": "Star|Plowhorse|Puzzle|Dog",
+            "price": 18.99,
+            "cuisine_type": "American"
+        }
+
+    Returns enhanced description with selling points and tips.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def post(self, request):
+        item_id = request.data.get("item_id")
+
+        # If item_id provided, fetch details from database
+        if item_id:
+            try:
+                item = MenuItem.objects.get(id=item_id)
+                item_name = item.title
+                current_description = item.description or ""
+                category = item.category or "Unknown"
+                price = float(item.price)
+            except MenuItem.DoesNotExist:
+                return Response(
+                    {"error": "Menu item not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            item_name = request.data.get("item_name")
+            current_description = request.data.get("current_description", "")
+            category = request.data.get("category", "Unknown")
+            price = float(request.data.get("price", 0))
+
+        cuisine_type = request.data.get("cuisine_type", "restaurant")
+
+        if not item_name:
+            return Response(
+                {"error": "item_name is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = ml_service.enhance_description_sync(
+                item_name=item_name,
+                current_description=current_description,
+                category=category,
+                price=price,
+                cuisine_type=cuisine_type,
+            )
+            return Response(result)
+        except MLServiceError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class SalesSuggestionsView(APIView):
+    """
+    Get AI-powered sales suggestions for a menu item.
+
+    Permissions: Managers and Admins only
+    Method: POST
+
+    Request body:
+        {
+            "item_id": "uuid" (optional, to auto-fetch item details),
+            "item_name": "string",
+            "category": "Star|Plowhorse|Puzzle|Dog",
+            "price": 45.99,
+            "cost": 18.00,
+            "purchases": 120
+        }
+
+    Returns priority, suggested price, actions, marketing tips.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def post(self, request):
+        item_id = request.data.get("item_id")
+
+        if item_id:
+            try:
+                item = MenuItem.objects.get(id=item_id)
+                item_name = item.title
+                category = item.category or "Unknown"
+                price = float(item.price)
+                cost = float(item.cost) if item.cost else price * 0.4
+                purchases = item.total_purchases
+            except MenuItem.DoesNotExist:
+                return Response(
+                    {"error": "Menu item not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            item_name = request.data.get("item_name")
+            category = request.data.get("category", "Unknown")
+            price = request.data.get("price")
+            cost = request.data.get("cost")
+            purchases = request.data.get("purchases")
+            
+            # Validate required fields when not using item_id
+            if not item_name or price is None or cost is None or purchases is None:
+                return Response(
+                    {"error": "item_name, price, cost, and purchases are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            price = float(price)
+            cost = float(cost)
+            purchases = int(purchases)
+
+        if not item_name:
+            return Response(
+                {"error": "item_name is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = ml_service.get_sales_suggestions_sync(
+                item_name=item_name,
+                category=category,
+                price=price,
+                cost=cost,
+                purchases=purchases,
+                section_avg_price=request.data.get("section_avg_price"),
+                section_avg_sales=request.data.get("section_avg_sales"),
+            )
+            return Response(result)
+        except MLServiceError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class MenuStructureAnalysisView(APIView):
+    """
+    Analyze menu structure and get optimization recommendations.
+
+    Permissions: Managers and Admins only
+    Method: POST
+
+    Request body (optional, auto-fetches if not provided):
+        {
+            "sections": [
+                {
+                    "name": "Appetizers",
+                    "items": [{"name": "Wings", "price": 12.99, "category": "Star"}]
+                }
+            ]
+        }
+
+    Returns overall score, recommendations, items to highlight/reconsider.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def post(self, request):
+        sections_data = request.data.get("sections")
+
+        # Auto-fetch from database if not provided
+        if not sections_data:
+            sections = MenuSection.objects.filter(is_active=True).order_by(
+                "display_order"
+            )
+            sections_data = []
+
+            for section in sections:
+                items = MenuItem.objects.filter(
+                    section=section, is_active=True
+                ).order_by("display_order")
+
+                items_data = [
+                    {
+                        "name": item.title,
+                        "price": float(item.price),
+                        "category": item.category or "Unknown",
+                        "purchases": item.total_purchases,
+                    }
+                    for item in items
+                ]
+
+                sections_data.append({"name": section.name, "items": items_data})
+
+        if not sections_data:
+            return Response(
+                {"error": "No menu sections found"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = ml_service.analyze_menu_structure_sync(sections_data)
+            return Response(result)
+        except MLServiceError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class CustomerRecommendationsView(APIView):
+    """
+    Get personalized item recommendations for a customer.
+
+    Permissions: Public (for customer use)
+    Method: POST
+
+    Request body:
+        {
+            "current_items": ["Burger", "Fries"],
+            "budget_remaining": 15.00,
+            "preferences": ["vegetarian", "spicy"]
+        }
+
+    Returns top recommendation, alternatives, upsells.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        current_items = request.data.get("current_items", [])
+        budget_remaining = request.data.get("budget_remaining")
+        preferences = request.data.get("preferences")
+
+        # Fetch active menu items
+        items = MenuItem.objects.filter(is_active=True).values(
+            "title", "price", "section__name"
+        )
+
+        menu_items = [
+            {
+                "name": item["title"],
+                "price": float(item["price"]),
+                "section": item["section__name"],
+            }
+            for item in items
+        ]
+
+        if not menu_items:
+            return Response(
+                {"error": "No menu items available"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = ml_service.get_customer_recommendations_sync(
+                current_items=current_items,
+                menu_items=menu_items,
+                budget_remaining=budget_remaining,
+                preferences=preferences,
+            )
+            return Response(result)
+        except MLServiceError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class OwnerReportView(APIView):
+    """
+    Generate an AI-powered insights report for owners.
+
+    Permissions: Managers and Admins only
+    Method: POST
+
+    Request body:
+        {
+            "period": "daily|weekly|monthly",
+            "summary_data": {} (optional, auto-generated if not provided)
+        }
+
+    Returns executive summary, highlights, concerns, recommendations.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def post(self, request):
+        period = request.data.get("period", "weekly")
+        summary_data = request.data.get("summary_data")
+
+        # Auto-generate summary if not provided
+        if not summary_data:
+            from django.db.models import Sum, Count, Avg
+            from datetime import datetime, timedelta
+
+            # Calculate date range based on period
+            if period == "daily":
+                start_date = datetime.now() - timedelta(days=1)
+            elif period == "monthly":
+                start_date = datetime.now() - timedelta(days=30)
+            else:  # weekly
+                start_date = datetime.now() - timedelta(days=7)
+
+            # Get order stats
+            orders = Order.objects.filter(created_at__gte=start_date)
+            order_stats = orders.aggregate(
+                total_orders=Count("id"),
+                total_revenue=Sum("total"),
+                avg_order_value=Avg("total"),
+            )
+
+            # Get category breakdown
+            category_breakdown = {}
+            for category in ["Star", "Plowhorse", "Puzzle", "Dog"]:
+                count = MenuItem.objects.filter(
+                    category=category, is_active=True
+                ).count()
+                category_breakdown[category] = count
+
+            # Get top items
+            top_items = list(
+                MenuItem.objects.filter(is_active=True)
+                .order_by("-total_purchases")[:5]
+                .values_list("title", flat=True)
+            )
+
+            summary_data = {
+                "period": period,
+                "total_orders": order_stats["total_orders"] or 0,
+                "total_revenue": float(order_stats["total_revenue"] or 0),
+                "average_order_value": float(order_stats["avg_order_value"] or 0),
+                "category_breakdown": category_breakdown,
+                "top_items": top_items,
+            }
+
+        try:
+            result = ml_service.generate_owner_report_sync(
+                summary_data=summary_data, period=period
+            )
+            return Response(result)
+        except MLServiceError as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )

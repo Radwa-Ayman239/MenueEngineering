@@ -212,7 +212,7 @@ class OrderModelTests(TestCase):
             cost=Decimal("1.50"),
             section=self.section,
         )
-        self.order = Order.objects.create(created_by=self.user, table_number="5")
+        self.order = Order.objects.create(created_by=self.user, table_number="5", created_at=timezone.now())
 
     def test_create_order(self):
         """Test basic order creation."""
@@ -255,14 +255,14 @@ class OrderModelTests(TestCase):
 
     def test_order_without_user(self):
         """Test order can be created without user."""
-        order = Order.objects.create(table_number="10")
+        order = Order.objects.create(table_number="10", created_at=timezone.now())
         self.assertIsNone(order.created_by)
 
     def test_order_status_choices(self):
         """Test all status choices."""
         statuses = ["pending", "preparing", "ready", "delivered", "cancelled"]
         for status in statuses:
-            order = Order.objects.create(status=status)
+            order = Order.objects.create(status=status, created_at=timezone.now())
             self.assertEqual(order.status, status)
 
     def test_order_user_set_null_on_delete(self):
@@ -274,7 +274,7 @@ class OrderModelTests(TestCase):
             last_name="User",
             phone_number="+9999999999",
         )
-        order = Order.objects.create(created_by=user, table_number="1")
+        order = Order.objects.create(created_by=user, table_number="1", created_at=timezone.now())
         user.delete()
         order.refresh_from_db()
         self.assertIsNone(order.created_by)
@@ -303,7 +303,7 @@ class OrderItemModelTests(TestCase):
             cost=Decimal("10.00"),
             section=self.section,
         )
-        self.order = Order.objects.create()
+        self.order = Order.objects.create(created_at=timezone.now())
         self.order_item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.item,

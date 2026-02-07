@@ -1,44 +1,55 @@
+"""
+Menu Engineering ML Service - AI Features Only.
+
+This service provides AI-powered features using OpenRouter/DeepSeek:
+- Description enhancement
+- Sales suggestions
+- Menu structure analysis
+- Customer recommendations
+- Owner reports
+
+Note: Menu item classification (Star/Plowhorse/Puzzle/Dog) is handled
+by the Django backend using a deterministic algorithm.
+"""
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-import joblib
-import numpy as np
-from pathlib import Path
+from typing import Optional
 
-# Global variables for models
-classifier = None
-label_encoder = None
+# Import OpenRouter AI service
+try:
+    from openrouter_service import (
+        enhance_description,
+        analyze_menu_structure,
+        generate_sales_suggestions,
+        get_customer_recommendations,
+        generate_owner_report,
+        is_gemini_available,
+    )
+
+    AI_ENABLED = True
+except ImportError:
+    AI_ENABLED = False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load models on startup, cleanup on shutdown"""
-    global classifier, label_encoder
-
-    models_path = Path("models")
-    classifier_path = models_path / "menu_classifier.joblib"
-    encoder_path = models_path / "label_encoder.joblib"
-
-    if classifier_path.exists():
-        classifier = joblib.load(classifier_path)
-        print("✓ Classifier loaded")
+    """Startup and shutdown events"""
+    if AI_ENABLED and is_gemini_available():
+        print("✓ AI service enabled (OpenRouter/DeepSeek)")
     else:
-        print("⚠ Classifier not found - predictions will fail")
-
-    if encoder_path.exists():
-        label_encoder = joblib.load(encoder_path)
-        print("✓ Label encoder loaded")
+        print("⚠ AI service not available - check OPENROUTER_API_KEY")
 
     yield  # App runs here
 
-    # Cleanup (if needed)
     print("Shutting down ML service...")
 
 
 app = FastAPI(
-    title="Menu Engineering ML API",
-    description="AI service for menu item classification and recommendations",
-    version="1.0.0",
+    title="Menu Engineering AI API",
+    description="AI service for menu description enhancement, recommendations, and intelligent insights",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -46,171 +57,215 @@ app = FastAPI(
 # ============ Request/Response Models ============
 
 
-class MenuItemPrediction(BaseModel):
-    price: float
-    purchases: int
-    margin: float
-    description_length: int = 0
+class EnhanceDescriptionRequest(BaseModel):
+    item_name: str
+    current_description: str = ""
+    category: str = "Unknown"
+    price: float = 0.0
+    cuisine_type: str = "restaurant"
+    # Customization options
+    custom_instructions: Optional[str] = None
+    tone: str = "professional"  # professional, casual, playful, elegant
+    include_allergens: bool = False
+    target_audience: Optional[str] = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "price": 129.0,
-                "purchases": 50,
-                "margin": 77.4,
-                "description_length": 45,
+                "item_name": "Grilled Chicken",
+                "current_description": "Chicken with vegetables",
+                "category": "Puzzle",
+                "price": 18.99,
+                "cuisine_type": "American",
+                "custom_instructions": "Emphasize the farm-to-table sourcing",
+                "tone": "elegant",
+                "include_allergens": True,
             }
         }
 
 
-class PredictionResponse(BaseModel):
-    category: str  # Star, Plowhorse, Puzzle, Dog
-    confidence: float
-    recommendations: list[str]
+class MenuStructureRequest(BaseModel):
+    sections: list[dict]
+    custom_instructions: Optional[str] = None
+    focus_areas: Optional[list[str]] = None  # ["pricing", "layout", "naming"]
 
-
-class BatchPredictionRequest(BaseModel):
-    items: list[MenuItemPrediction]
-
-
-class BatchPredictionResponse(BaseModel):
-    predictions: list[dict]
-
-
-# ============ Recommendation Logic ============
-
-
-def generate_recommendations(item: MenuItemPrediction, category: str) -> list[str]:
-    """Generate actionable recommendations based on category"""
-    recommendations = []
-
-    if category == "Dog":
-        recommendations.append("Consider removing or rebranding this item")
-        recommendations.append(f"Test a 10-15% price reduction to gauge demand")
-        recommendations.append("Move to less prominent menu position")
-        if item.description_length < 30:
-            recommendations.append("If keeping, add an appealing description")
-
-    elif category == "Plowhorse":
-        # High popularity, low profit
-        recommendations.append(
-            "Increase price by 5% (popular items tolerate increases)"
-        )
-        recommendations.append("Add premium add-ons to increase margin")
-        recommendations.append(
-            "Reduce portion size slightly while maintaining perceived value"
-        )
-        recommendations.append("Review supplier costs for cost reduction opportunities")
-
-    elif category == "Puzzle":
-        # Low popularity, high profit
-        recommendations.append("Move to a more prominent menu position")
-        recommendations.append("Train staff to recommend this item")
-        recommendations.append("Add to popular bundle combinations")
-        if item.description_length < 50:
-            recommendations.append("Enhance description with sensory/appetizing words")
-        recommendations.append("Consider a limited-time promotion to boost awareness")
-
-    elif category == "Star":
-        # High popularity, high profit - protect these!
-        recommendations.append("Maintain current pricing and positioning")
-        recommendations.append("Feature prominently on menu")
-        recommendations.append("Use as anchor for bundle deals")
-        recommendations.append("Monitor competitor pricing for similar items")
-
-    return recommendations
-
-
-# ============ API Endpoints ============
-
-
-@app.post("/predict", response_model=PredictionResponse)
-async def predict_category(item: MenuItemPrediction):
-    """Predict menu engineering category for a single item"""
-    if classifier is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Model not loaded. Please ensure model files exist in /models directory.",
-        )
-
-    features = np.array([[item.price, item.purchases, item.margin]])
-
-    # Get prediction
-    category_encoded = classifier.predict(features)[0]
-
-    # Decode category name if we have the encoder
-    if label_encoder is not None:
-        category = label_encoder.inverse_transform([category_encoded])[0]
-    else:
-        # Fallback mapping if encoder not available
-        category_map = {0: "Dog", 1: "Plowhorse", 2: "Puzzle", 3: "Star"}
-        category = category_map.get(category_encoded, str(category_encoded))
-
-    # Get confidence
-    probabilities = classifier.predict_proba(features)[0]
-    confidence = float(max(probabilities))
-
-    # Generate recommendations
-    recommendations = generate_recommendations(item, category)
-
-    return PredictionResponse(
-        category=category, confidence=confidence, recommendations=recommendations
-    )
-
-
-@app.post("/batch-predict", response_model=BatchPredictionResponse)
-async def batch_predict(request: BatchPredictionRequest):
-    """Predict categories for multiple items at once"""
-    if classifier is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-
-    features = np.array(
-        [[item.price, item.purchases, item.margin] for item in request.items]
-    )
-
-    categories_encoded = classifier.predict(features)
-    probabilities = classifier.predict_proba(features)
-
-    predictions = []
-    for i, item in enumerate(request.items):
-        if label_encoder is not None:
-            category = label_encoder.inverse_transform([categories_encoded[i]])[0]
-        else:
-            category_map = {0: "Dog", 1: "Plowhorse", 2: "Puzzle", 3: "Star"}
-            category = category_map.get(
-                categories_encoded[i], str(categories_encoded[i])
-            )
-
-        predictions.append(
-            {
-                "category": category,
-                "confidence": float(max(probabilities[i])),
-                "recommendations": generate_recommendations(item, category),
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "sections": [
+                    {
+                        "name": "Appetizers",
+                        "items": [
+                            {"name": "Wings", "price": 12.99, "category": "Star"}
+                        ],
+                    }
+                ],
+                "focus_areas": ["pricing", "layout"],
+                "custom_instructions": "Focus on upselling opportunities",
             }
-        )
+        }
 
-    return BatchPredictionResponse(predictions=predictions)
+
+class SalesSuggestionsRequest(BaseModel):
+    item_name: str
+    category: str
+    price: float
+    cost: float
+    purchases: int
+    section_avg_price: Optional[float] = None
+    section_avg_sales: Optional[float] = None
+    custom_instructions: Optional[str] = None
+    strategy: str = "balanced"  # aggressive, balanced, conservative
+
+
+class CustomerRecommendationsRequest(BaseModel):
+    current_items: list[str] = []
+    menu_items: list[dict]
+    budget_remaining: Optional[float] = None
+    preferences: Optional[list[str]] = None
+    custom_instructions: Optional[str] = None
+    upsell_aggressiveness: str = "medium"  # low, medium, high
+
+
+class OwnerReportRequest(BaseModel):
+    summary_data: dict
+    period: str = "weekly"
+    custom_instructions: Optional[str] = None
+    report_style: str = "executive"  # executive, detailed
+
+
+# ============ AI Endpoints ============
+
+
+@app.post("/enhance-description")
+async def api_enhance_description(request: EnhanceDescriptionRequest):
+    """Use AI to enhance a menu item description to be more appetizing"""
+    if not AI_ENABLED or not is_gemini_available():
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    try:
+        result = await enhance_description(
+            item_name=request.item_name,
+            current_description=request.current_description,
+            category=request.category,
+            price=request.price,
+            cuisine_type=request.cuisine_type,
+            custom_instructions=request.custom_instructions,
+            tone=request.tone,
+            include_allergens=request.include_allergens,
+            target_audience=request.target_audience,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/menu-structure")
+async def api_analyze_menu_structure(request: MenuStructureRequest):
+    """Analyze menu structure and suggest optimal layout"""
+    if not AI_ENABLED or not is_gemini_available():
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    try:
+        result = await analyze_menu_structure(
+            menu_sections=request.sections,
+            custom_instructions=request.custom_instructions,
+            focus_areas=request.focus_areas,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/sales-suggestions")
+async def api_sales_suggestions(request: SalesSuggestionsRequest):
+    """Generate AI-powered sales suggestions for a menu item"""
+    if not AI_ENABLED or not is_gemini_available():
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    try:
+        result = await generate_sales_suggestions(
+            item_name=request.item_name,
+            category=request.category,
+            price=request.price,
+            cost=request.cost,
+            purchases=request.purchases,
+            section_avg_price=request.section_avg_price,
+            section_avg_sales=request.section_avg_sales,
+            custom_instructions=request.custom_instructions,
+            strategy=request.strategy,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/customer-recommendations")
+async def api_customer_recommendations(request: CustomerRecommendationsRequest):
+    """Get personalized item recommendations for customers"""
+    if not AI_ENABLED or not is_gemini_available():
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    try:
+        result = await get_customer_recommendations(
+            current_items=request.current_items,
+            menu_items=request.menu_items,
+            budget_remaining=request.budget_remaining,
+            preferences=request.preferences,
+            custom_instructions=request.custom_instructions,
+            upsell_aggressiveness=request.upsell_aggressiveness,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate-report")
+async def api_generate_report(request: OwnerReportRequest):
+    """Generate AI-powered insights report for restaurant owners"""
+    if not AI_ENABLED or not is_gemini_available():
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    try:
+        result = await generate_owner_report(
+            summary_data=request.summary_data,
+            period=request.period,
+            custom_instructions=request.custom_instructions,
+            report_style=request.report_style,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ Health & Info Endpoints ============
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    ai_status = AI_ENABLED and is_gemini_available() if AI_ENABLED else False
     return {
         "status": "healthy",
-        "model_loaded": classifier is not None,
-        "encoder_loaded": label_encoder is not None,
+        "ai_enabled": ai_status,
+        # Legacy field names for backwards compatibility
+        "gemini_enabled": ai_status,
     }
 
 
 @app.get("/")
 async def root():
-    """API root - basic info"""
+    """API information endpoint"""
     return {
-        "service": "Menu Engineering ML API",
-        "version": "1.0.0",
-        "endpoints": {
-            "POST /predict": "Predict category for single item",
-            "POST /batch-predict": "Predict categories for multiple items",
-            "GET /health": "Health check",
-        },
+        "service": "Menu Engineering AI API",
+        "version": "3.0.0",
+        "description": "AI-powered menu engineering features",
+        "endpoints": [
+            "POST /enhance-description - Enhance menu item descriptions with AI",
+            "POST /sales-suggestions - Get AI sales improvement suggestions",
+            "POST /menu-structure - Analyze menu structure with AI",
+            "POST /customer-recommendations - Get personalized recommendations",
+            "POST /generate-report - Generate AI owner reports",
+            "GET /health - Service health check",
+        ],
     }

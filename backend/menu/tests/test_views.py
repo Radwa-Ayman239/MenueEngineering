@@ -7,6 +7,7 @@ from decimal import Decimal
 from unittest.mock import patch, Mock
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 from ..models import MenuSection, MenuItem, Order, OrderItem, CustomerActivity
@@ -77,7 +78,7 @@ class BaseViewTest(APITestCase):
 class MenuSectionViewTests(BaseViewTest):
     def test_public_list_sections(self):
         """Anyone can list sections."""
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Only active sections for anonymous
@@ -86,7 +87,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_manager_sees_inactive_sections(self):
         """Managers can see all sections including inactive."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
@@ -94,7 +95,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_filter_sections_by_active(self):
         """Test filtering sections by is_active query param."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("section-list") + "?is_active=false"
+        url = reverse("menu:section-list") + "?is_active=false"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "Seasonal")
@@ -102,7 +103,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_manager_create_section(self):
         """Managers can create sections."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         data = {"name": "Drinks", "display_order": 2}
 
         response = self.client.post(url, data)
@@ -112,7 +113,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_admin_create_section(self):
         """Admins can create sections."""
         self.client.force_authenticate(user=self.admin)
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         data = {"name": "Appetizers", "display_order": 0}
 
         response = self.client.post(url, data)
@@ -121,7 +122,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_staff_cannot_create_section(self):
         """Staff cannot create sections."""
         self.client.force_authenticate(user=self.staff)
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         data = {"name": "Dessert"}
 
         response = self.client.post(url, data)
@@ -129,7 +130,7 @@ class MenuSectionViewTests(BaseViewTest):
 
     def test_public_cannot_create_section(self):
         """Anonymous cannot create sections."""
-        url = reverse("section-list")
+        url = reverse("menu:section-list")
         data = {"name": "Dessert"}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -137,7 +138,7 @@ class MenuSectionViewTests(BaseViewTest):
     def test_manager_update_section(self):
         """Managers can update sections."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("section-detail", args=[self.section.id])
+        url = reverse("menu:section-detail", args=[self.section.id])
         data = {"name": "Main Courses", "display_order": 1}
 
         response = self.client.patch(url, data)
@@ -148,14 +149,14 @@ class MenuSectionViewTests(BaseViewTest):
     def test_manager_delete_section(self):
         """Managers can delete sections."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("section-detail", args=[self.inactive_section.id])
+        url = reverse("menu:section-detail", args=[self.inactive_section.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(MenuSection.objects.count(), 1)
 
     def test_retrieve_section(self):
         """Anyone can retrieve section details."""
-        url = reverse("section-detail", args=[self.section.id])
+        url = reverse("menu:section-detail", args=[self.section.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Mains")
@@ -167,7 +168,7 @@ class MenuSectionViewTests(BaseViewTest):
 class MenuItemViewTests(BaseViewTest):
     def test_public_list_items(self):
         """Anyone can list items."""
-        url = reverse("item-list")
+        url = reverse("menu:item-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Only active items for anonymous
@@ -176,13 +177,13 @@ class MenuItemViewTests(BaseViewTest):
     def test_manager_sees_inactive_items(self):
         """Managers see all items including inactive."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-list")
+        url = reverse("menu:item-list")
         response = self.client.get(url)
         self.assertEqual(len(response.data), 2)
 
     def test_filter_items_by_section(self):
         """Test filtering items by section."""
-        url = reverse("item-list") + f"?section={self.section.id}"
+        url = reverse("menu:item-list") + f"?section={self.section.id}"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
@@ -191,14 +192,14 @@ class MenuItemViewTests(BaseViewTest):
         self.item.category = "star"
         self.item.save()
 
-        url = reverse("item-list") + "?category=star"
+        url = reverse("menu:item-list") + "?category=star"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
     def test_filter_items_by_active(self):
         """Test filtering items by is_active."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-list") + "?is_active=false"
+        url = reverse("menu:item-list") + "?is_active=false"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["title"], "Old Item")
@@ -206,7 +207,7 @@ class MenuItemViewTests(BaseViewTest):
     def test_manager_create_item(self):
         """Managers can create items."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-list")
+        url = reverse("menu:item-list")
         data = {
             "title": "New Item",
             "price": "12.00",
@@ -219,7 +220,7 @@ class MenuItemViewTests(BaseViewTest):
     def test_staff_cannot_create_item(self):
         """Staff cannot create items."""
         self.client.force_authenticate(user=self.staff)
-        url = reverse("item-list")
+        url = reverse("menu:item-list")
         data = {
             "title": "New Item",
             "price": "12.00",
@@ -232,7 +233,7 @@ class MenuItemViewTests(BaseViewTest):
     def test_manager_update_item(self):
         """Managers can update items."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-detail", args=[self.item.id])
+        url = reverse("menu:item-detail", args=[self.item.id])
         data = {"price": "15.00"}
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -242,82 +243,75 @@ class MenuItemViewTests(BaseViewTest):
     def test_manager_delete_item(self):
         """Managers can delete items."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-detail", args=[self.inactive_item.id])
+        url = reverse("menu:item-detail", args=[self.inactive_item.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_retrieve_item_detail(self):
         """Anyone can retrieve item details."""
-        url = reverse("item-detail", args=[self.item.id])
+        url = reverse("menu:item-detail", args=[self.item.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("margin", response.data)
         self.assertIn("margin_percentage", response.data)
 
-    @patch("menu.views.ml_service")
-    def test_analyze_item_action(self, mock_ml_service):
-        """Test the custom 'analyze' action with mocked ML service."""
-        mock_ml_service.predict_sync.return_value = {
-            "category": "star",
+    @patch("menu.views.classify_menu_item")
+    def test_analyze_item_action(self, mock_classify):
+        """Test the custom 'analyze' action with mocked local classifier."""
+        mock_classify.return_value = {
+            "category": "Star",
             "confidence": 0.99,
             "recommendations": ["Keep it"],
+            "metrics": {},
         }
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-analyze", args=[self.item.id])
+        url = reverse("menu:item-analyze", args=[self.item.id])
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["category"], "star")
+        # Check normalized category (frontend expects capitalized, model stores lowercase)
+        # View returns whatever classifier returns, model sets lowercase.
+        # Check response (mock return value)
+        self.assertEqual(response.data["category"], "Star")
 
         self.item.refresh_from_db()
         self.assertEqual(self.item.category, "star")
         self.assertEqual(self.item.ai_confidence, 0.99)
         self.assertIsNotNone(self.item.last_analyzed)
 
-    @patch("menu.views.ml_service")
-    def test_analyze_item_ml_error(self, mock_ml_service):
-        """Test analyze endpoint when ML service fails."""
-        from ..services import MLServiceError
+    # test_analyze_item_ml_error removed as classification is now local/deterministic
 
-        mock_ml_service.predict_sync.side_effect = MLServiceError("Service down")
-
-        self.client.force_authenticate(user=self.manager)
-        url = reverse("item-analyze", args=[self.item.id])
-        response = self.client.post(url)
-
-        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertIn("error", response.data)
-
-    @patch("menu.views.ml_service")
-    def test_bulk_analyze(self, mock_ml_service):
+    @patch("menu.views.classify_menu_items_batch")
+    def test_bulk_analyze(self, mock_classify_batch):
         """Test bulk analyze endpoint."""
-        mock_ml_service.batch_predict_sync.return_value = [
-            {"category": "star", "confidence": 0.95},
+        mock_classify_batch.return_value = [
+            {"category": "Star", "confidence": 0.95},
         ]
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-bulk-analyze")
+        url = reverse("menu:item-bulk-analyze")
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("analyzed_count", response.data)
 
-    @patch("menu.views.ml_service")
-    def test_bulk_analyze_empty(self, mock_ml_service):
+    @patch("menu.views.classify_menu_items_batch")
+    def test_bulk_analyze_empty(self, mock_classify_batch):
         """Test bulk analyze with no active items."""
         MenuItem.objects.update(is_active=False)
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("item-bulk-analyze")
+        url = reverse("menu:item-bulk-analyze")
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("message", response.data)
+        mock_classify_batch.assert_not_called()
 
     def test_stats_permission(self):
         """Test stats permission levels."""
-        url = reverse("item-stats")
+        url = reverse("menu:item-stats")
 
         # Public - 403
         response = self.client.get(url)
@@ -347,7 +341,7 @@ class OrderViewTests(BaseViewTest):
     def test_create_order(self):
         """Staff can create orders."""
         self.client.force_authenticate(user=self.staff)
-        url = reverse("order-list")
+        url = reverse("menu:order-list")
         data = {
             "table_number": "5",
             "items": [{"menu_item": str(self.item.id), "quantity": 2}],
@@ -359,7 +353,7 @@ class OrderViewTests(BaseViewTest):
     def test_manager_create_order(self):
         """Managers can create orders."""
         self.client.force_authenticate(user=self.manager)
-        url = reverse("order-list")
+        url = reverse("menu:order-list")
         data = {
             "table_number": "1",
             "items": [{"menu_item": str(self.item.id), "quantity": 1}],
@@ -369,7 +363,7 @@ class OrderViewTests(BaseViewTest):
 
     def test_public_cannot_create_order(self):
         """Anonymous cannot create orders."""
-        url = reverse("order-list")
+        url = reverse("menu:order-list")
         data = {
             "table_number": "5",
             "items": [{"menu_item": str(self.item.id), "quantity": 1}],
@@ -382,7 +376,7 @@ class OrderViewTests(BaseViewTest):
         Order.objects.create(created_by=self.staff_2, total=20)
 
         self.client.force_authenticate(user=self.staff)
-        url = reverse("order-list")
+        url = reverse("menu:order-list")
         response = self.client.get(url)
 
         self.assertEqual(len(response.data), 1)
@@ -393,7 +387,7 @@ class OrderViewTests(BaseViewTest):
         Order.objects.create(created_by=self.staff_2, total=20)
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("order-list")
+        url = reverse("menu:order-list")
         response = self.client.get(url)
 
         self.assertEqual(len(response.data), 2)
@@ -405,7 +399,7 @@ class OrderViewTests(BaseViewTest):
         Order.objects.create(created_by=self.staff, status="pending")
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("order-list") + "?status=completed"
+        url = reverse("menu:order-list") + "?status=completed"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
@@ -413,14 +407,14 @@ class OrderViewTests(BaseViewTest):
         """Test filtering orders by date range."""
         self.client.force_authenticate(user=self.manager)
         today = self.order.created_at.date().isoformat()
-        url = reverse("order-list") + f"?date_from={today}&date_to={today}"
+        url = reverse("menu:order-list") + f"?date_from={today}&date_to={today}"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
     def test_update_status(self):
         """Staff can update order status."""
         self.client.force_authenticate(user=self.staff)
-        url = reverse("order-update-status", args=[self.order.id])
+        url = reverse("menu:order-update-status", args=[self.order.id])
         data = {"status": "preparing"}
 
         response = self.client.patch(url, data)
@@ -439,7 +433,7 @@ class OrderViewTests(BaseViewTest):
         )
 
         self.client.force_authenticate(user=self.staff)
-        url = reverse("order-detail", args=[self.order.id])
+        url = reverse("menu:order-detail", args=[self.order.id])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -448,7 +442,7 @@ class OrderViewTests(BaseViewTest):
 
     def test_order_stats_manager_only(self):
         """Only managers can view order stats."""
-        url = reverse("order-stats")
+        url = reverse("menu:order-stats")
 
         # Staff - 403
         self.client.force_authenticate(user=self.staff)
@@ -470,7 +464,7 @@ class OrderViewTests(BaseViewTest):
 class CustomerActivityViewTests(BaseViewTest):
     def test_public_log_activity(self):
         """Anyone can log activity."""
-        url = reverse("activity-list")
+        url = reverse("menu:activity-list")
         data = {
             "session_id": "anon-123",
             "event_type": "view",
@@ -481,7 +475,7 @@ class CustomerActivityViewTests(BaseViewTest):
 
     def test_public_log_activity_with_metadata(self):
         """Activity can include metadata."""
-        url = reverse("activity-list")
+        url = reverse("menu:activity-list")
         data = {
             "session_id": "anon-456",
             "event_type": "click",
@@ -493,14 +487,14 @@ class CustomerActivityViewTests(BaseViewTest):
 
     def test_public_cannot_list_activities(self):
         """Anonymous cannot list activities."""
-        url = reverse("activity-list")
+        url = reverse("menu:activity-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_staff_cannot_list_activities(self):
         """Staff cannot list activities."""
         self.client.force_authenticate(user=self.staff)
-        url = reverse("activity-list")
+        url = reverse("menu:activity-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -511,7 +505,7 @@ class CustomerActivityViewTests(BaseViewTest):
         )
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("activity-list")
+        url = reverse("menu:activity-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -526,7 +520,7 @@ class CustomerActivityViewTests(BaseViewTest):
         )
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("activity-list") + "?event_type=view"
+        url = reverse("menu:activity-list") + "?event_type=view"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
@@ -537,7 +531,7 @@ class CustomerActivityViewTests(BaseViewTest):
         )
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("activity-list") + f"?menu_item={self.item.id}"
+        url = reverse("menu:activity-list") + f"?menu_item={self.item.id}"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
@@ -547,7 +541,7 @@ class CustomerActivityViewTests(BaseViewTest):
         CustomerActivity.objects.create(session_id="other-session", event_type="view")
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("activity-list") + "?session=unique-session"
+        url = reverse("menu:activity-list") + "?session=unique-session"
         response = self.client.get(url)
         self.assertEqual(len(response.data), 1)
 
@@ -558,7 +552,7 @@ class CustomerActivityViewTests(BaseViewTest):
         )
 
         self.client.force_authenticate(user=self.manager)
-        url = reverse("activity-stats")
+        url = reverse("menu:activity-stats")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("by_event_type", response.data)
@@ -571,7 +565,7 @@ class CustomerActivityViewTests(BaseViewTest):
 class PublicMenuViewTests(BaseViewTest):
     def test_get_full_menu(self):
         """Test the aggregated public menu endpoint."""
-        url = reverse("public-menu")
+        url = reverse("menu:public-menu")
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -581,7 +575,7 @@ class PublicMenuViewTests(BaseViewTest):
 
     def test_public_menu_excludes_inactive(self):
         """Public menu excludes inactive sections and items."""
-        url = reverse("public-menu")
+        url = reverse("menu:public-menu")
         response = self.client.get(url)
 
         # Should not include inactive section or inactive item
@@ -605,7 +599,7 @@ class MLServiceHealthViewTests(BaseViewTest):
             "encoder_loaded": True,
         }
 
-        url = reverse("ml-health")
+        url = reverse("menu:ml-health")
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -620,7 +614,7 @@ class MLServiceHealthViewTests(BaseViewTest):
             "encoder_loaded": False,
         }
 
-        url = reverse("ml-health")
+        url = reverse("menu:ml-health")
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
