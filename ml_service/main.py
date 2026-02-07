@@ -140,7 +140,7 @@ class OwnerReportRequest(BaseModel):
 @app.post("/enhance-description")
 async def api_enhance_description(request: EnhanceDescriptionRequest):
     """Use AI to enhance a menu item description to be more appetizing"""
-    if not AI_ENABLED or not is_gemini_available():
+    if not AI_ENABLED:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     try:
@@ -163,7 +163,7 @@ async def api_enhance_description(request: EnhanceDescriptionRequest):
 @app.post("/menu-structure")
 async def api_analyze_menu_structure(request: MenuStructureRequest):
     """Analyze menu structure and suggest optimal layout"""
-    if not AI_ENABLED or not is_gemini_available():
+    if not AI_ENABLED:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     try:
@@ -180,7 +180,7 @@ async def api_analyze_menu_structure(request: MenuStructureRequest):
 @app.post("/sales-suggestions")
 async def api_sales_suggestions(request: SalesSuggestionsRequest):
     """Generate AI-powered sales suggestions for a menu item"""
-    if not AI_ENABLED or not is_gemini_available():
+    if not AI_ENABLED:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     try:
@@ -203,7 +203,7 @@ async def api_sales_suggestions(request: SalesSuggestionsRequest):
 @app.post("/customer-recommendations")
 async def api_customer_recommendations(request: CustomerRecommendationsRequest):
     """Get personalized item recommendations for customers"""
-    if not AI_ENABLED or not is_gemini_available():
+    if not AI_ENABLED:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     try:
@@ -223,7 +223,7 @@ async def api_customer_recommendations(request: CustomerRecommendationsRequest):
 @app.post("/generate-report")
 async def api_generate_report(request: OwnerReportRequest):
     """Generate AI-powered insights report for restaurant owners"""
-    if not AI_ENABLED or not is_gemini_available():
+    if not AI_ENABLED:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     try:

@@ -9,12 +9,30 @@ Supports multiple free models:
 Custom Instructions:
     All functions support a `custom_instructions` parameter to inject
     additional context or requirements into the prompts.
+
+Enhanced with Behavioral Economics and Mathematical Optimization principles.
 """
 
 import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+
+# Import psychological and mathematical optimization principles
+from psychology_constants import (
+    MENU_ENGINEERING_SYSTEM_PROMPT,
+    CATEGORY_PSYCHOLOGY,
+    DESCRIPTION_ENHANCEMENT_CONTEXT,
+    SALES_SUGGESTIONS_CONTEXT,
+    MENU_ANALYSIS_CONTEXT,
+    CUSTOMER_RECOMMENDATIONS_CONTEXT,
+    OWNER_REPORT_CONTEXT,
+    PRICE_PSYCHOLOGY,
+    MARGIN_CLASSIFICATION,
+    WASTE_IMPACT,
+    OPTIMIZATION_WEIGHTS,
+    ANALYSIS_OUTPUT_TEMPLATE,
+)
 
 # Load environment variables
 load_dotenv()
@@ -32,10 +50,8 @@ MODELS = {
 # Default model
 DEFAULT_MODEL = MODELS["deepseek"]
 
-# Default system prompt (can be overridden)
-DEFAULT_SYSTEM_PROMPT = """You are an expert restaurant consultant specializing in menu engineering and optimization. 
-You provide actionable, data-driven recommendations to improve menu profitability and customer satisfaction.
-Always respond with valid JSON as specified in the user's request."""
+# Enhanced system prompt with behavioral economics principles
+DEFAULT_SYSTEM_PROMPT = MENU_ENGINEERING_SYSTEM_PROMPT
 
 
 def get_client():
@@ -105,7 +121,7 @@ async def enhance_description(
     target_audience: str = None,
 ) -> dict:
     """
-    Enhance a menu item description to be more appetizing.
+    Enhance a menu item description using behavioral economics principles.
 
     Args:
         item_name: Name of the menu item
@@ -119,8 +135,27 @@ async def enhance_description(
         target_audience: Target customer demographic
 
     Returns:
-        dict with enhanced_description, key_selling_points, tips
+        dict with enhanced_description, key_selling_points, tips, psychology_applied
     """
+
+    # Get category-specific psychological guidance
+    category_lower = category.lower() if category else "puzzle"
+    category_psychology = CATEGORY_PSYCHOLOGY.get(
+        category_lower, CATEGORY_PSYCHOLOGY["puzzle"]
+    )
+
+    # Determine price tier for appropriate messaging
+    if price < PRICE_PSYCHOLOGY["value_threshold"]:
+        price_tier = "value"
+        price_guidance = (
+            "Frame as generous, satisfying, honest value. Avoid cheapness signals."
+        )
+    elif price < PRICE_PSYCHOLOGY["premium_threshold"]:
+        price_tier = "mid-range"
+        price_guidance = "Balance quality signals with accessibility. Convey craftsmanship without pretension."
+    else:
+        price_tier = "premium"
+        price_guidance = "Use premium language: artisanal, signature, hand-crafted. Justify through experience."
 
     # Build custom requirements section
     requirements = []
@@ -137,24 +172,31 @@ async def enhance_description(
 
     requirements_text = "\n".join(requirements) if requirements else ""
 
-    prompt = f"""Enhance this menu item description to be more appetizing and increase sales.
+    prompt = f"""Enhance this menu item description using behavioral economics principles.
 
 Item: {item_name}
 Current Description: {current_description if current_description else "None provided"}
-Category: {category}
-Price: ${price:.2f}
+Category: {category} ({category_psychology['profile']})
+Price: ${price:.2f} ({price_tier} tier)
 Cuisine Type: {cuisine_type}
+
+{DESCRIPTION_ENHANCEMENT_CONTEXT}
+
+CATEGORY-SPECIFIC STRATEGY:
+{category_psychology['psychology']}
+Description Tone: {category_psychology['description_tone']}
+{price_guidance}
 
 Standard Guidelines:
 - Use sensory words (crispy, tender, aromatic, fresh)
 - Highlight premium ingredients
 - Keep it concise (2-3 sentences max)
-- Match the price point expectation
+- Match the price point expectation using price-quality heuristic
 
 {f"Additional Requirements:{chr(10)}{requirements_text}" if requirements_text else ""}
 
 Respond ONLY with valid JSON:
-{{"enhanced_description": "Your improved description", "key_selling_points": ["point1", "point2"], "tips": ["tip1", "tip2"]}}"""
+{{"enhanced_description": "Your improved description", "key_selling_points": ["point1", "point2"], "tips": ["tip1", "tip2"], "psychology_applied": ["List psychological principles used"]}}"""
 
     response = chat_completion(prompt)
     return parse_json_response(response)
@@ -199,14 +241,16 @@ async def analyze_menu_structure(
     if custom_instructions:
         custom_text = f"\n\nADDITIONAL REQUIREMENTS: {custom_instructions}"
 
-    prompt = f"""Analyze this menu structure and provide optimization recommendations.
+    prompt = f"""Analyze this menu structure using choice architecture and behavioral economics principles.
 
 Menu:
 {json.dumps(menu_summary, indent=2)}
 {focus_text}{custom_text}
 
+{MENU_ANALYSIS_CONTEXT}
+
 Respond ONLY with valid JSON:
-{{"overall_score": 7, "section_order_recommendation": ["Section1", "Section2"], "items_to_highlight": ["item1"], "items_to_reconsider": ["item2"], "general_recommendations": ["rec1", "rec2"]}}"""
+{{"overall_score": 7, "section_order_recommendation": ["Section1", "Section2"], "items_to_highlight": ["item1"], "items_to_reconsider": ["item2"], "general_recommendations": ["rec1", "rec2"], "choice_architecture_notes": ["Golden triangle usage", "Decoy positioning"], "cognitive_load_assessment": "low/medium/high"}}"""
 
     response = chat_completion(prompt)
     return parse_json_response(response)
@@ -255,18 +299,39 @@ async def generate_sales_suggestions(
     if custom_instructions:
         custom_text = f"\n\nADDITIONAL REQUIREMENTS: {custom_instructions}"
 
-    prompt = f"""Generate specific sales suggestions for this menu item.
+    # Classify margin quality
+    margin_quality = (
+        "excellent"
+        if margin_pct >= 70
+        else (
+            "good" if margin_pct >= 50 else "concerning" if margin_pct >= 35 else "poor"
+        )
+    )
+
+    # Get category psychology
+    category_lower = category.lower() if category else "puzzle"
+    category_psychology = CATEGORY_PSYCHOLOGY.get(
+        category_lower, CATEGORY_PSYCHOLOGY["puzzle"]
+    )
+
+    prompt = f"""Generate sales suggestions using mathematical optimization and behavioral economics.
 
 Item: {item_name}
-Category: {category} (Star=high profit+sales, Plowhorse=low profit+high sales, Puzzle=high profit+low sales, Dog=low both)
-Price: ${price:.2f}, Cost: ${cost:.2f}, Margin: ${margin:.2f} ({margin_pct:.1f}%)
+Category: {category} ({category_psychology['profile']})
+Price: ${price:.2f}, Cost: ${cost:.2f}, Margin: ${margin:.2f} ({margin_pct:.1f}% - {margin_quality})
 Purchases: {purchases}
 {f"Section Avg Price: ${section_avg_price:.2f}" if section_avg_price else ""}
 {f"Section Avg Sales: {int(section_avg_sales)}" if section_avg_sales else ""}
 {strategy_text}{custom_text}
 
+{SALES_SUGGESTIONS_CONTEXT}
+
+CATEGORY STRATEGY:
+{category_psychology['strategy']}
+{category_psychology['pricing_approach']}
+
 Respond ONLY with valid JSON:
-{{"priority": "high", "suggested_price": {price}, "immediate_actions": ["action1", "action2"], "marketing_tips": ["tip1"], "estimated_impact": "Expected outcome"}}"""
+{{"priority": "high", "suggested_price": {price}, "immediate_actions": ["action1", "action2"], "marketing_tips": ["tip1"], "estimated_impact": "Expected outcome", "margin_optimization": "strategy for improving margin", "elasticity_assessment": "low/medium/high price sensitivity"}}"""
 
     response = chat_completion(prompt)
     return parse_json_response(response)
@@ -311,7 +376,7 @@ async def get_customer_recommendations(
     if custom_instructions:
         custom_text = f"\n\nADDITIONAL REQUIREMENTS: {custom_instructions}"
 
-    prompt = f"""Suggest items to pair with the customer's order.
+    prompt = f"""Generate customer recommendations using behavioral economics principles.
 
 Current Order: {current_items if current_items else "Nothing yet"}
 {"Budget: $" + f"{budget_remaining:.2f}" if budget_remaining else ""}
@@ -321,8 +386,10 @@ Current Order: {current_items if current_items else "Nothing yet"}
 Available Items:
 {json.dumps(menu_summary, indent=2)}
 
+{CUSTOMER_RECOMMENDATIONS_CONTEXT}
+
 Respond ONLY with valid JSON:
-{{"top_recommendation": {{"item": "Item Name", "reason": "Why", "pitch": "Server pitch"}}, "alternatives": [{{"item": "Name", "reason": "Why"}}], "upsells": [{{"item": "Add-on", "pitch": "Quick pitch"}}]}}"""
+{{"top_recommendation": {{"item": "Item Name", "reason": "Why", "pitch": "Server pitch", "psychology_trigger": "loss aversion/social proof/etc"}}, "alternatives": [{{"item": "Name", "reason": "Why"}}], "upsells": [{{"item": "Add-on", "pitch": "Quick pitch"}}], "compromise_recommendation": {{"item": "Safe middle choice", "reason": "Why this is the balanced option"}}}}"""
 
     response = chat_completion(prompt)
     return parse_json_response(response)
@@ -354,14 +421,16 @@ async def generate_owner_report(
     if custom_instructions:
         custom_text = f"\n\nADDITIONAL REQUIREMENTS: {custom_instructions}"
 
-    prompt = f"""Generate a {period} insights report for a restaurant owner.
+    prompt = f"""Generate a {period} insights report using multi-objective optimization principles.
 
 Data:
 {json.dumps(summary_data, indent=2)}
 {style_text}{custom_text}
 
+{OWNER_REPORT_CONTEXT}
+
 Respond ONLY with valid JSON:
-{{"executive_summary": "2-3 sentence overview", "highlights": ["highlight1"], "concerns": ["concern1"], "top_recommendations": [{{"action": "What to do", "impact": "Result", "effort": "low"}}], "next_steps": ["step1"]}}"""
+{{"executive_summary": "2-3 sentence overview", "highlights": ["highlight1"], "concerns": ["concern1"], "top_recommendations": [{{"action": "What to do", "impact": "Result", "effort": "low", "priority_score": 8}}], "next_steps": ["step1"], "trade_offs": ["Explicit trade-off statement"], "multi_objective_score": {{"revenue": 7, "margin": 6, "satisfaction": 8, "simplicity": 7}}}}"""
 
     response = chat_completion(prompt)
     return parse_json_response(response)
