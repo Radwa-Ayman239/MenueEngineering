@@ -7,8 +7,8 @@ Permissions:
 - Customers (unauthenticated): Can only view menu sections and items (read-only)
 """
 
-from rest_framework import viewsets, status
-from rest_framework.pagination import PageNumberPagination  
+from rest_framework import viewsets, status, filters
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, SAFE_METHODS
@@ -41,11 +41,13 @@ from .permissions import (
     IsStaffOrAbove,
 )
 
+
 # 1. Define the Pagination Class first
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 50 
-    page_size_query_param = 'page_size'
+    page_size = 50
+    page_size_query_param = "page_size"
     max_page_size = 100
+
 
 # ============ Menu Section Views ============
 
@@ -127,6 +129,10 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     """
 
     queryset = MenuItem.objects.all()
+
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["title", "description", "category"]
 
     def get_authenticators(self):
         """Allow unauthenticated access for safe methods"""
@@ -273,16 +279,26 @@ class MenuItemViewSet(viewsets.ModelViewSet):
                 count=Count("id"),
                 total_revenue=Sum("total_revenue"),
                 total_purchases=Sum("total_purchases"),
+                total_profit=Sum("total_profit"),
             )
+        )
+
+        # Calculate overall totals
+        total_items = MenuItem.objects.filter(is_active=True).count()
+        overall_profit = (
+            MenuItem.objects.filter(is_active=True).aggregate(
+                total=Sum("total_profit")
+            )["total"]
+            or 0
         )
 
         return Response(
             {
                 "categories": list(stats),
-                "total_items": MenuItem.objects.filter(is_active=True).count(),
+                "total_items": total_items,
+                "overall_profit": overall_profit,
             }
         )
-    
 
 
 # ============ Order Views ============
@@ -619,6 +635,59 @@ class SalesSuggestionsView(APIView):
     """
 
     permission_classes = [AllowAny]  # Public for development
+
+    def get(self, request):
+        """
+        Get general sales suggestions for underperforming items (Dogs and Puzzles).
+        """
+        # Find items that need attention (Dogs and Puzzles)
+        candidates = list(
+            MenuItem.objects.filter(
+                category__in=["dog", "puzzle"], is_active=True
+            ).order_by("?")[:3]
+        )
+
+        suggestions = []
+        for item in candidates:
+            try:
+                result = ml_service.get_sales_suggestions_sync(
+                    item_name=item.title,
+                    category=item.category or "Unknown",
+                    price=float(item.price),
+                    cost=float(item.cost),
+                    purchases=item.total_purchases,
+                )
+                suggestions.append(
+                    {
+                        "title": f"Optimization for {item.title}",
+                        "description": result.get(
+                            "margin_optimization",
+                            (
+                                (
+                                    result.get("immediate_actions")
+                                    or ["Analyze pricing and placement."]
+                                )[0]
+                                if isinstance(result.get("immediate_actions"), list)
+                                else "Analyze pricing and placement."
+                            ),
+                        ),
+                        "item_id": str(item.id),
+                        "details": result,
+                    }
+                )
+            except Exception:
+                continue
+
+        if not suggestions:
+            # Fallback if no specific dogs/puzzles found
+            suggestions.append(
+                {
+                    "title": "General Menu Tip",
+                    "description": "Ensure your high-profit items are highlighted on the menu.",
+                }
+            )
+
+        return Response(suggestions)
 
     def post(self, request):
         item_id = request.data.get("item_id")

@@ -32,7 +32,9 @@ A comprehensive menu engineering platform for restaurants that uses AI/ML models
 - **Backend**: Django REST Framework with Knox authentication, PostgreSQL, Redis/Celery
 - **ML Notebooks**: Decision Tree classifier + Association Rules (Apriori algorithm)
 - **Data Analysis**: Customer behavior analysis with menu engineering labels
-- **Frontend**: Empty (placeholder only)
+- **Frontend**: ✅ **Next.js 14** with TypeScript, Tailwind CSS, and role-based auth
+
+> **→ See [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md) and [FRONTEND_QUICK_START.md](FRONTEND_QUICK_START.md) for frontend documentation**
 
 ---
 

@@ -30,6 +30,17 @@ services:
     depends_on:
       - backend
     restart: on-failure
+
+  frontend:
+    build: ./frontend
+    container_name: menu_engineering_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    restart: on-failure
   
   redis:
     image: redis:alpine
